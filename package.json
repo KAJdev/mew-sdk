@@ -1,0 +1,27 @@
+{
+  "name": "mew-sdk",
+  "version": "0.1.0",
+  "description": "mew CLI, app SDK types and a local dev harness",
+  "license": "MIT",
+  "homepage": "https://mew.space/docs",
+  "repository": { "type": "git", "url": "git+https://github.com/KAJdev/mew-sdk.git" },
+  "keywords": ["mew", "apps", "sdk", "cli", "sandbox"],
+  "type": "module",
+  "types": "./index.d.ts",
+  "bin": { "mew": "cli/bin/mew.js" },
+  "exports": {
+    ".": { "types": "./index.d.ts", "default": "./index.js" },
+    "./dev": { "types": "./dev.d.ts", "default": "./dev.mjs" },
+    "./document": { "types": "./document.d.ts", "default": "./document.mjs" },
+    "./bootstrap.js": "./bootstrap.js",
+    "./sample.html": "./sample.html",
+    "./package.json": "./package.json"
+  },
+  "files": ["index.js", "index.d.ts", "dev.mjs", "dev.d.ts", "document.mjs", "document.d.ts", "assets.mjs", "bootstrap.js", "sample.html", "cli/bin", "cli/src", "examples", "README.md", "LICENSE"],
+  "sideEffects": false,
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "test": "node --test test/*.test.mjs cli/tests/*.test.js",
+    "build:binaries": "bun scripts/build-binaries.mjs"
+  }
+}

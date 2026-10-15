@@ -1,0 +1,71 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+  packages: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Match tag to package version
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::package.json is $version but the tag is $GITHUB_REF_NAME"
+            exit 1
+          fi
+      - run: npm test
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.14"
+      - run: bun scripts/build-binaries.mjs dist
+      - name: Checksums
+        working-directory: dist
+        run: |
+          cp ../install.sh ../install.ps1 .
+          sha256sum mew-* install.sh install.ps1 > SHA256SUMS
+          cat SHA256SUMS
+      - run: ./dist/mew-linux-x64 --version
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            dist/mew-*
+            dist/install.sh
+            dist/install.ps1
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --title "mew $GITHUB_REF_NAME" --generate-notes
+
+  github-packages:
+    needs: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          registry-url: https://npm.pkg.github.com
+          scope: "@kajdev"
+      - run: npm pkg set name=@kajdev/mew-sdk
+      - run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ github.token }}

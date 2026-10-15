@@ -1,0 +1,8 @@
+{
+  "name": "private notes",
+  "description": "A private scratchpad that follows the mew theme.",
+  "visibility": "unlisted",
+  "expected_version": 0,
+  "manifest": { "sdk_version": 1, "permissions": ["storage:private"], "state_version": 1 },
+  "ui": "index.html"
+}

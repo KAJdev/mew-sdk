@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Shared counter</title>
+<style>
+  body { max-width: 36rem; margin: 2rem auto; padding: 1rem; }
+  button,input { font: inherit; color: inherit; background: var(--mew-background); border: 1px solid var(--mew-tertiary); padding: .5rem; }
+  button { cursor: pointer; }
+  p { color: var(--mew-secondary); }
+  output { display: block; font-size: 3rem; margin: 1rem 0; }
+  label { display: block; margin: 2rem 0 .5rem; }
+</style></head>
+<body>
+<h1>Shared counter</h1>
+<p>The count belongs to this installation. Your note belongs only to you.</p>
+<output id="count" aria-live="polite">0</output>
+<button id="increment">Add one</button>
+<label for="note">Your private note</label>
+<input id="note" maxlength="1000"><button id="save">Save note</button>
+<p id="status" role="status">Loading state...</p>
+<script>
+  let shared, personal;
+  const count = document.querySelector('#count');
+  const note = document.querySelector('#note');
+  const status = document.querySelector('#status');
+  async function load() {
+    [shared, personal] = await Promise.all([mew.state.get('shared'), mew.state.get('private')]);
+    count.textContent = String(shared.value.count || 0);
+    note.value = String(personal.value.note || '');
+    status.textContent = 'Ready';
+  }
+  document.querySelector('#increment').onclick = async function () {
+    this.disabled = true;
+    try {
+      shared = await mew.state.put('shared', { expected_revision: shared.revision, value: { count: Number(shared.value.count || 0) + 1 } });
+      count.textContent = String(shared.value.count);
+      status.textContent = 'Count saved';
+    } catch { status.textContent = 'Could not save. Reload the app to refresh state.'; }
+    finally { this.disabled = false; }
+  };
+  document.querySelector('#save').onclick = async function () {
+    this.disabled = true;
+    try {
+      personal = await mew.state.put('private', { expected_revision: personal.revision, value: { note: note.value } });
+      status.textContent = 'Private note saved';
+    } catch { status.textContent = 'Could not save. Reload the app to refresh state.'; }
+    finally { this.disabled = false; }
+  };
+  load().catch(() => { status.textContent = 'State unavailable. Check the installation permissions.'; });
+</script>
+</body></html>
