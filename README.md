@@ -2,26 +2,23 @@
 
 The `mew` CLI, the types for the SDK that mew injects into app frames, a local preview harness and example apps. Full documentation lives at https://mew.space/docs.
 
-## Install the CLI
+## Install
 
-macOS and Linux:
+```sh
+npm install --global mew-sdk
+mew --version
+```
+
+This installs the `mew` CLI. Node 22 or newer is required. To run it without installing:
+
+```sh
+npx mew-sdk --help
+```
+
+Standalone binaries for Linux, macOS and Windows are attached to each [GitHub release](https://github.com/KAJdev/mew-sdk/releases) with `SHA256SUMS`, build provenance attestations and checksum-verifying `install.sh` and `install.ps1` scripts, for machines without Node:
 
 ```sh
 curl -fsSL https://github.com/KAJdev/mew-sdk/releases/latest/download/install.sh | sh
-```
-
-Windows (PowerShell):
-
-```powershell
-irm https://github.com/KAJdev/mew-sdk/releases/latest/download/install.ps1 | iex
-```
-
-The scripts download the standalone binary for your platform from the latest GitHub release, verify it against the release `SHA256SUMS`, and install it to `~/.mew/bin`. Set `MEW_VERSION=v0.1.0` to pin a release or `MEW_INSTALL_DIR` to choose another directory. Each release also carries build provenance attestations; verify a downloaded binary with `gh attestation verify mew-linux-x64 --repo KAJdev/mew-sdk`.
-
-With Node 22 or newer you can run the CLI straight from this repository instead:
-
-```sh
-npx github:KAJdev/mew-sdk --help
 ```
 
 ## Use the CLI
@@ -36,7 +33,7 @@ mew dev ./counter-app
 ## SDK types
 
 ```sh
-npm install --save-dev github:KAJdev/mew-sdk
+npm install --save-dev mew-sdk
 ```
 
 mew injects the SDK into each app frame as the global `mew`. The package gives editors and `tsc` its types:
@@ -81,10 +78,6 @@ The folder needs an `app.json` with a relative `ui` path and `manifest.permissio
 
 - `sample.html`: a shared counter and a private note, scaffolded by `mew init`.
 - `examples/notes`: a private scratchpad. Preview it with `mew dev examples/notes`.
-
-## GitHub Packages
-
-Releases are also published to GitHub Packages as `@kajdev/mew-sdk`. GitHub requires a personal access token with `read:packages` to install from that registry, even for public packages, so the commands above are the supported path.
 
 ## License
 
