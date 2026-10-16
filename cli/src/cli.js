@@ -24,7 +24,7 @@ const help = `mew app development
   dev [folder] [--port <port>]        preview the app UI locally with in-memory state
   dev <folder> <event.json>           invoke a local operator-owned handler (repository checkout)
 
-MEW_API_URL is the API base before /v1 and defaults to https://api.mew.space/api;
+MEW_API_URL is the API base before /v1 and defaults to https://mew.space/api;
 set it to http://127.0.0.1:8000 for a local API. MEW_TOKEN is an account token
 held in the environment.
 Publishing does not start hosted execution. Scoped CI tokens, managed logs and
@@ -109,7 +109,7 @@ export async function run(args, { env = process.env, output = console.log } = {}
     output(JSON.stringify(result, null, 2));
     return;
   }
-  const api = new ApiClient(env.MEW_API_URL ?? 'https://api.mew.space/api', env.MEW_TOKEN);
+  const api = new ApiClient(env.MEW_API_URL ?? 'https://mew.space/api', env.MEW_TOKEN);
   const print = (value) => output(JSON.stringify(value, null, 2));
   if (command === 'deploy') {
     if (rest.length > 1) throw new Error('Usage: mew deploy [folder]');
