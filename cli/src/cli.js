@@ -13,16 +13,18 @@ const help = `mew app development
   catalog [--after <cursor>]           list one page of public apps
   installations <channel> [--after <cursor>]  list one page of channel apps
   inspect <app-id>                     inspect an app and its publication head
-  install <app-id> <version> personal  create a private channel and install
-  install <app-id> <version> <channel> install in a channel you manage
+  install <app-id> personal            create a private channel and install
+  install <app-id> <channel>           install in a channel you manage
+  approve <installation-id>           approve permissions a newer version requests
   disable <installation-id>           disable an installation
   uninstall <installation-id>         uninstall and delete app state
   state <installation-id> <scope>     read private or shared state
   dev [folder] [--port <port>]        preview the app UI locally with in-memory state
   dev <folder> <event.json>           invoke a local operator-owned handler (repository checkout)
 
-MEW_API_URL is the API base before /v1, such as http://127.0.0.1:8000
-or https://your-host/api. MEW_TOKEN is an account token held in the environment.
+MEW_API_URL is the API base before /v1 and defaults to https://api.mew.space/api;
+set it to http://127.0.0.1:8000 for a local API. MEW_TOKEN is an account token
+held in the environment.
 Publishing does not start hosted execution. Scoped CI tokens, managed logs and
 secret operations are not available in this milestone.`;
 
@@ -105,7 +107,7 @@ export async function run(args, { env = process.env, output = console.log } = {}
     output(JSON.stringify(result, null, 2));
     return;
   }
-  const api = new ApiClient(env.MEW_API_URL ?? 'http://127.0.0.1:8000', env.MEW_TOKEN);
+  const api = new ApiClient(env.MEW_API_URL ?? 'https://api.mew.space/api', env.MEW_TOKEN);
   const print = (value) => output(JSON.stringify(value, null, 2));
   if (command === 'deploy') {
     if (rest.length > 1) throw new Error('Usage: mew deploy [folder]');
@@ -141,21 +143,22 @@ export async function run(args, { env = process.env, output = console.log } = {}
     return print(await api.request(`apps/${identifier(rest[0])}`));
   }
   if (command === 'install') {
-    if (rest.length !== 3 || !/^[1-9]\d*$/.test(rest[1]) || !Number.isSafeInteger(Number(rest[1]))) {
-      throw new Error('Usage: mew install <app-id> <version> personal|<channel-id>');
-    }
+    if (rest.length !== 2) throw new Error('Usage: mew install <app-id> personal|<channel-id>');
     const app = identifier(rest[0]);
-    const version = Number(rest[1]);
-    const release = await api.request(`apps/${app}/versions/${version}`);
-    const permissions = release.manifest.permissions;
-    if (typeof env.MEW_ACCEPT_PERMISSIONS !== 'string' || JSON.stringify([...permissions].sort()) !==
-        JSON.stringify(env.MEW_ACCEPT_PERMISSIONS.split(',').filter(Boolean).sort())) {
-      throw new Error(`Review this release. App code can read and disclose granted data. To consent, set MEW_ACCEPT_PERMISSIONS=${JSON.stringify(permissions.join(','))}`);
-    }
+    const permissions = accepted((await api.request(`apps/${app}`)).permissions, 'this app');
     print(await api.request(`apps/${app}/installations`, 'POST', {
-      version, accepted_permissions: permissions,
-      target: rest[2] === 'personal' ? { type: 'personal' } : { type: 'channel', channel_id: decodeURIComponent(identifier(rest[2])) },
+      accepted_permissions: permissions,
+      target: rest[1] === 'personal' ? { type: 'personal' } : { type: 'channel', channel_id: decodeURIComponent(identifier(rest[1])) },
     }));
+    return;
+  }
+  if (command === 'approve') {
+    if (rest.length !== 1) throw new Error('Usage: mew approve <installation-id>');
+    const endpoint = `app-installations/${identifier(rest[0])}`;
+    const installation = await api.request(endpoint);
+    if (!Array.isArray(installation.pending_permissions)) throw new Error('This installation has no pending permissions');
+    const permissions = accepted(installation.pending_permissions, 'the pending permissions');
+    print(await api.request(`${endpoint}/approve`, 'POST', { permissions, expected_revision: installation.revision }));
     return;
   }
   if (command === 'disable' || command === 'uninstall') {
@@ -174,4 +177,13 @@ export async function run(args, { env = process.env, output = console.log } = {}
     return print(await api.request(`${endpoint}/state/${rest[1]}`, 'GET', undefined, installation.revision));
   }
   throw new Error(`Unknown command. Run mew --help.`);
+
+  function accepted(permissions, subject) {
+    if (!Array.isArray(permissions)) throw new Error('Unexpected permission list');
+    if (typeof env.MEW_ACCEPT_PERMISSIONS !== 'string' || JSON.stringify([...permissions].sort()) !==
+        JSON.stringify(env.MEW_ACCEPT_PERMISSIONS.split(',').filter(Boolean).sort())) {
+      throw new Error(`Review ${subject}. App code can read and disclose granted data. To consent, set MEW_ACCEPT_PERMISSIONS=${JSON.stringify(permissions.join(','))}`);
+    }
+    return permissions;
+  }
 }

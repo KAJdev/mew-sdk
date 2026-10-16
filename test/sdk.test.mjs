@@ -70,13 +70,13 @@ test("dev server serves the production sandbox document and enforces local state
   assert.match(sandbox.headers.get("content-security-policy"), new RegExp(`frame-ancestors ${origin}; sandbox allow-scripts$`));
   assert.match(await sandbox.text(), /mew-app-v1/);
   assert.equal((await (await fetch(`${origin}/app`)).json()).html.includes("Shared counter"), true);
-  assert.deepEqual(await (await fetch(`${origin}/state/shared`)).json(), { revision: 0, value: {} });
+  assert.deepEqual(await (await fetch(`${origin}/state/shared`)).json(), { revision: 0, value: {}, state_version: null });
   assert.equal((await fetch(`${origin}/state/private`)).status, 403);
   const put = (body, headers = { origin }) => fetch(`${origin}/state/shared`, { method: "PUT", headers, body: JSON.stringify(body) });
   assert.equal((await put({ expected_revision: 0, value: { count: 1 } }, {})).status, 403);
-  assert.deepEqual(await (await put({ expected_revision: 0, value: { count: 1 } })).json(), { revision: 1, value: { count: 1 } });
+  assert.deepEqual(await (await put({ expected_revision: 0, value: { count: 1 } })).json(), { revision: 1, value: { count: 1 }, state_version: 1 });
   assert.equal((await put({ expected_revision: 0, value: { count: 2 } })).status, 409);
   assert.equal((await put({ expected_revision: 1, value: { big: "x".repeat(17_000) } })).status, 400);
   assert.equal((await fetch(`${origin}/state`, { method: "DELETE", headers: { origin } })).status, 200);
-  assert.deepEqual(await (await fetch(`${origin}/state/shared`)).json(), { revision: 0, value: {} });
+  assert.deepEqual(await (await fetch(`${origin}/state/shared`)).json(), { revision: 0, value: {}, state_version: null });
 });

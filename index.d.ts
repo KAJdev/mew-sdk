@@ -1,5 +1,5 @@
 export type Scope = "private" | "shared";
-export type State = { revision: number; value: Record<string, unknown> };
+export type State = { revision: number; value: Record<string, unknown>; state_version: number | null };
 export type StateUpdate = { expected_revision: number; value: Record<string, unknown> };
 export type Theme = Readonly<{ version: 1; primary: string; background: string; secondary: string; tertiary: string }>;
 export interface MewSDK {

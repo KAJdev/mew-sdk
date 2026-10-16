@@ -18,7 +18,8 @@ async function loadApp(dir) {
   if (!ui.startsWith(`${dir}${path.sep}`)) throw new Error("The ui file must remain inside the app folder");
   if ((await stat(ui)).size > MAX_DOCUMENT_BYTES) throw new Error("The ui file exceeds 256 KiB");
   const permissions = Array.isArray(config.manifest?.permissions) ? config.manifest.permissions : [];
-  return { html: await readFile(ui, "utf8"), permissions };
+  const stateVersion = Number.isSafeInteger(config.manifest?.state_version) ? config.manifest.state_version : 1;
+  return { html: await readFile(ui, "utf8"), permissions, stateVersion };
 }
 
 function hostPage(nonce) {
@@ -118,9 +119,9 @@ export async function createDevServer({ folder = ".", host = "127.0.0.1", port =
       const match = /^\/state\/(private|shared)$/.exec(url.pathname);
       if (match && ["GET", "PUT"].includes(request.method)) {
         const scope = match[1];
-        const { permissions } = await loadApp(dir);
+        const { permissions, stateVersion } = await loadApp(dir);
         if (!permissions.includes(`storage:${scope}`)) return json(response, 403, { error: `app.json manifest does not grant storage:${scope}` });
-        const current = states.get(scope) ?? { revision: 0, value: {} };
+        const current = states.get(scope) ?? { revision: 0, value: {}, state_version: null };
         if (request.method === "GET") return json(response, 200, current);
         let body = "";
         for await (const chunk of request) {
@@ -132,7 +133,7 @@ export async function createDevServer({ folder = ".", host = "127.0.0.1", port =
           return json(response, 400, { error: "State values must be JSON objects of at most 16 KiB" });
         }
         if (update.expected_revision !== current.revision) return json(response, 409, { error: "state revision conflict" });
-        const next = { revision: current.revision + 1, value: update.value };
+        const next = { revision: current.revision + 1, value: update.value, state_version: stateVersion };
         states.set(scope, next);
         return json(response, 200, next);
       }

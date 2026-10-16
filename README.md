@@ -46,8 +46,9 @@ await mew.state.put("shared", { expected_revision: shared.revision, value: { cou
 mew.theme.subscribe((theme) => console.log(theme.primary));
 ```
 
-- `mew.state.get(scope)` returns `{ revision, value }` for `"private"` (this viewer) or `"shared"` (the whole installation). The manifest must grant the scope with `storage:private` or `storage:shared`.
+- `mew.state.get(scope)` returns `{ revision, value, state_version }` for `"private"` (this viewer) or `"shared"` (the whole installation). The manifest must grant the scope with `storage:private` or `storage:shared`.
 - `mew.state.put(scope, { expected_revision, value })` replaces the whole JSON object (at most 16 KiB) when `expected_revision` matches and rejects otherwise. Read again before retrying.
+- `state_version` is the manifest `state_version` of the app version that last wrote the value, or `null` when nothing has been written. Installations follow the latest published version and stored state is kept as-is across versions, so new code can detect an older shape and upgrade it on its next write.
 - `mew.theme.get()` and `mew.theme.subscribe(listener)` expose the host colors, which are also live CSS variables: `--mew-primary`, `--mew-background`, `--mew-secondary` and `--mew-tertiary`.
 
 An app is a single HTML document with inline scripts and styles. The frame is an opaque-origin sandbox without network access, so bundle anything you import into the document.

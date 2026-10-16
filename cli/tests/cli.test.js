@@ -99,12 +99,25 @@ test('stale publication does not silently advance expected version or recreate a
 });
 
 test('install requires exact explicit permission consent before private channel creation', async (t) => {
-  const { env, requests } = await fixture(t, (_req, res) => { res.end(JSON.stringify({ manifest: { permissions: ['storage:private'] } })); });
-  await assert.rejects(run(['install', 'app1', '1', 'personal'], { env }), /consent/);
+  const { env, requests } = await fixture(t, (_req, res) => { res.end(JSON.stringify({ permissions: ['storage:private'] })); });
+  await assert.rejects(run(['install', 'app1', '1', 'personal'], { env }), /Usage/);
+  await assert.rejects(run(['install', 'app1', 'personal'], { env }), /consent/);
   assert.equal(requests.length, 1);
-  await run(['install', 'app1', '1', 'personal'], { env: { ...env, MEW_ACCEPT_PERMISSIONS: 'storage:private' }, output() {} });
-  assert.deepEqual(requests.at(-1).body.target, { type: 'personal' });
-  assert.deepEqual(requests.at(-1).body.accepted_permissions, ['storage:private']);
+  assert.equal(requests[0].path, '/v1/apps/app1');
+  await run(['install', 'app1', 'personal'], { env: { ...env, MEW_ACCEPT_PERMISSIONS: 'storage:private' }, output() {} });
+  assert.deepEqual(requests.at(-1).body, { accepted_permissions: ['storage:private'], target: { type: 'personal' } });
+});
+
+test('approve submits exactly the pending permissions with the read revision', async (t) => {
+  const { env, requests } = await fixture(t, (req, res) => {
+    res.end(JSON.stringify(req.method === 'GET' ? { id: 'inst1', revision: 4, pending_permissions: ['storage:private', 'storage:shared'] } : { id: 'inst1', revision: 5, pending_permissions: null }));
+  });
+  await assert.rejects(run(['approve'], { env }), /Usage/);
+  await assert.rejects(run(['approve', 'inst1'], { env: { ...env, MEW_ACCEPT_PERMISSIONS: 'storage:private' } }), /storage:private,storage:shared/);
+  await run(['approve', 'inst1'], { env: { ...env, MEW_ACCEPT_PERMISSIONS: 'storage:shared,storage:private' }, output() {} });
+  assert.equal(requests.at(-1).path, '/v1/app-installations/inst1/approve');
+  assert.equal(requests.at(-1).method, 'POST');
+  assert.deepEqual(requests.at(-1).body, { permissions: ['storage:private', 'storage:shared'], expected_revision: 4 });
 });
 
 test('artifact paths cannot read outside the project through symlinks', async (t) => {
