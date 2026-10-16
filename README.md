@@ -46,12 +46,55 @@ await mew.state.put("shared", { expected_revision: shared.revision, value: { cou
 mew.theme.subscribe((theme) => console.log(theme.primary));
 ```
 
-- `mew.state.get(scope)` returns `{ revision, value, state_version }` for `"private"` (this viewer) or `"shared"` (the whole installation). The manifest must grant the scope with `storage:private` or `storage:shared`.
+- `mew.state.get(scope)` returns `{ revision, value, state_version }` for `"private"` (this viewer), `"shared"` (the whole installation) or `"profile"` (the owner's public profile data, on their personal installation). The manifest must grant `private` and `shared` with `storage:private` or `storage:shared`.
 - `mew.state.put(scope, { expected_revision, value })` replaces the whole JSON object (at most 16 KiB) when `expected_revision` matches and rejects otherwise. Read again before retrying.
 - `state_version` is the manifest `state_version` of the app version that last wrote the value, or `null` when nothing has been written. Installations follow the latest published version and stored state is kept as-is across versions, so new code can detect an older shape and upgrade it on its next write.
 - `mew.theme.get()` and `mew.theme.subscribe(listener)` expose the host colors, which are also live CSS variables: `--mew-primary`, `--mew-background`, `--mew-secondary` and `--mew-tertiary`.
 
-An app is a single HTML document with inline scripts and styles. The frame is an opaque-origin sandbox without network access, so bundle anything you import into the document.
+The frame is an opaque-origin sandbox without network access, so bundle anything you import into the widget.
+
+### Widgets
+
+An app declares named widgets in its manifest, each of one type:
+
+```json
+"widgets": {
+  "main": { "type": "page", "title": "polls" },
+  "pinned": { "type": "panel", "anchors": ["top", "right"] },
+  "poll": { "type": "message", "message_type": "poll", "max_height": 320 },
+  "card": { "type": "profile", "height": 140 }
+}
+```
+
+- `page` is a channel tab.
+- `panel` can be pinned by channel managers to one of its `anchors`.
+- `message` renders app messages of its `message_type` inline in chat.
+- `profile` shows on the owner's profile popout. It reads only the owner's `"profile"` state and cannot post or call.
+
+Each widget ships as `{ js, css, html }`. The frame builds the `html` body, then a style element from `css`, then runs `js` as a module.
+
+`mew.context` describes where the frame is running:
+
+| widget | context |
+| --- | --- |
+| page | `{ installation_id, widget, viewer: { id, username } }` |
+| panel | `{ installation_id, widget, viewer, anchor }` |
+| message | `{ installation_id, widget, viewer, message: { id, type, data, content, author_id, created_at } }` |
+| profile | `{ installation_id, widget, viewer: { is_owner } }` |
+
+```ts
+mew.state.watch("shared", ({ revision, value }) => render(value));
+mew.on("message", (message) => render(message.data));
+mew.on("realtime", ({ topic, data }) => console.log(topic, data));
+const result = await mew.call("vote", { option: 1 });
+await mew.messages.post({ type: "poll", data: { question: "lunch?" }, content: "poll: lunch?" });
+```
+
+- `mew.state.watch(scope, listener)` delivers the current state and every later update with a higher revision. It returns an unsubscribe function.
+- `mew.on("state" | "realtime" | "message" | "theme", listener)` subscribes to live events. A message widget receives `"message"` when its own message is edited.
+- `mew.call(name, args)` runs a handler action and resolves to its result. Page, panel and message widgets can call.
+- `mew.messages.post({ type, data, content })` posts an app message as the current user after a click or key press. `content` is the plain-text fallback shown wherever the widget cannot render. It needs the `messages:post` permission and a message widget for `type`.
+- Message and profile widgets size to their content. `mew.frame.setHeight(px)` sets the height explicitly.
 
 ### Helpers
 

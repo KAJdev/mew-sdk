@@ -1,12 +1,41 @@
-export type Scope = "private" | "shared";
+export type Scope = "private" | "shared" | "profile";
 export type State = { revision: number; value: Record<string, unknown>; state_version: number | null };
 export type StateUpdate = { expected_revision: number; value: Record<string, unknown> };
+export type StateEvent = Readonly<{ scope: Scope; revision: number; value: Record<string, unknown> }>;
+export type RealtimeEvent = Readonly<{ topic: string; data: unknown }>;
 export type Theme = Readonly<{ version: 1; primary: string; background: string; secondary: string; tertiary: string }>;
+export type WidgetType = "page" | "panel" | "message" | "profile";
+export type ContextMessage = Readonly<{ id: string; type: string; data: Readonly<Record<string, unknown>>; content: string; author_id: string; created_at: string }>;
+export type Context = Readonly<{
+  installation_id: string;
+  widget: Readonly<{ name: string; type: WidgetType }>;
+  /** profile widgets only learn whether the viewer owns the profile */
+  viewer: Readonly<{ id: string; username: string }> | Readonly<{ is_owner: boolean }>;
+  anchor?: "left" | "right" | "top" | "bottom";
+  message?: ContextMessage;
+}>;
+export type PostedMessage = { type: string; data: Record<string, unknown>; content: string };
+export interface Events {
+  state: StateEvent;
+  realtime: RealtimeEvent;
+  message: ContextMessage;
+  theme: Theme;
+}
 export interface MewSDK {
   readonly version: 1;
+  readonly context: Context;
+  call<T = unknown>(name: string, args?: unknown): Promise<T>;
+  on<K extends keyof Events>(event: K, listener: (value: Events[K]) => void): () => void;
+  readonly messages: {
+    post(message: PostedMessage): Promise<{ id: string }>;
+  };
+  readonly frame: {
+    setHeight(height: number): void;
+  };
   readonly state: {
     get(scope: Scope): Promise<State>;
     put(scope: Scope, update: StateUpdate): Promise<State>;
+    watch(scope: Scope, listener: (state: State) => void): () => void;
   };
   readonly theme: {
     get(): Theme;

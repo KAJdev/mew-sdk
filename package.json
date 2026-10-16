@@ -1,6 +1,6 @@
 {
   "name": "mew-sdk",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "mew CLI, app SDK types and a local dev harness",
   "license": "MIT",
   "homepage": "https://mew.space/docs",
@@ -14,13 +14,15 @@
     "./dev": { "types": "./dev.d.ts", "default": "./dev.mjs" },
     "./document": { "types": "./document.d.ts", "default": "./document.mjs" },
     "./handler": { "types": "./handler.d.ts", "default": "./handler.js" },
+    "./build": { "types": "./build.d.ts", "default": "./build.mjs" },
     "./bootstrap.js": "./bootstrap.js",
     "./sample.html": "./sample.html",
     "./package.json": "./package.json"
   },
-  "files": ["index.js", "index.d.ts", "dev.mjs", "dev.d.ts", "document.mjs", "document.d.ts", "handler.d.ts", "handler.js", "assets.mjs", "bootstrap.js", "sample.html", "cli/bin", "cli/src", "examples", "README.md", "LICENSE"],
+  "files": ["index.js", "index.d.ts", "dev.mjs", "dev.d.ts", "document.mjs", "document.d.ts", "handler.d.ts", "handler.js", "build.mjs", "build.d.ts", "assets.mjs", "bootstrap.js", "sample.html", "cli/bin", "cli/src", "examples", "README.md", "LICENSE"],
   "sideEffects": false,
   "engines": { "node": ">=22" },
+  "dependencies": { "esbuild": "0.28.2" },
   "devDependencies": { "typescript": "~5.9.3" },
   "scripts": {
     "test": "node --test test/*.test.mjs cli/tests/*.test.js",

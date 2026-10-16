@@ -2,7 +2,9 @@ import { mkdir, readFile, realpath, rename, stat, writeFile } from 'node:fs/prom
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { ApiClient } from './client.js';
-import { sampleHtml, version } from '../../assets.mjs';
+import { handlerSource, sampleHtml, version } from '../../assets.mjs';
+import { buildProject } from '../../build.mjs';
+import { collect, describeInVm } from './project.js';
 
 const help = `mew app development
 
@@ -112,8 +114,34 @@ export async function run(args, { env = process.env, output = console.log } = {}
   if (command === 'deploy') {
     if (rest.length > 1) throw new Error('Usage: mew deploy [folder]');
     const { dir, config, source } = await configuration(rest[0]);
+    if (config.widgets) {
+      const esbuild = await import('esbuild').catch(() => {
+        throw new Error('Bundling needs the npm package: npm i -g mew-sdk');
+      });
+      const built = await buildProject(await collect(dir), { esbuild, describe: describeInVm, modules: { 'mew-sdk/handler': handlerSource }, resolveDir: dir });
+      if (!config.app_id) {
+        if (config.expected_version !== 0) throw new Error('A new app must have expected_version 0');
+        const app = await api.request('apps', 'POST', { name: config.name, description: config.description, visibility: config.visibility });
+        config.app_id = app.id;
+        await save(dir, config);
+      }
+      const version = await api.request(`apps/${identifier(config.app_id)}/versions`, 'POST', {
+        expected_version: config.expected_version, manifest: built.manifest, widgets: built.widgets,
+        ...(built.handler_bundle === undefined ? {} : { handler_bundle: built.handler_bundle }),
+        ...(built.source === undefined ? {} : { source: built.source }),
+      });
+      config.expected_version = version.version;
+      await save(dir, config);
+      print({ app_id: config.app_id, version: version.version, widgets: Object.keys(built.widgets), handler: built.manifest.handler ?? null });
+      return;
+    }
     const ui_html = await source(config.ui, 262_144);
     const handler_source = config.handler ? await source(config.handler, 262_144) : undefined;
+    if (config.documents !== undefined && (!config.documents || typeof config.documents !== 'object' || Array.isArray(config.documents) ||
+        Object.keys(config.documents).some((key) => !['panel', 'message', 'widget'].includes(key)))) {
+      throw new Error('app.json documents may only name panel, message and widget files');
+    }
+    const documents = config.documents ? Object.fromEntries(await Promise.all(Object.entries(config.documents).map(async ([surface, file]) => [surface, await source(file, 262_144)]))) : undefined;
     if (!config.app_id) {
       if (config.expected_version !== 0) throw new Error('A new app must have expected_version 0');
       const app = await api.request('apps', 'POST', { name: config.name, description: config.description, visibility: config.visibility });
@@ -123,6 +151,7 @@ export async function run(args, { env = process.env, output = console.log } = {}
     const version = await api.request(`apps/${identifier(config.app_id)}/versions`, 'POST', {
       expected_version: config.expected_version, manifest: config.manifest, ui_html,
       ...(handler_source === undefined ? {} : { handler_source }),
+      ...(documents === undefined ? {} : { documents }),
     });
     config.expected_version = version.version;
     await save(dir, config);

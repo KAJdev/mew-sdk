@@ -22,6 +22,25 @@ mew deploy ./counter-app
 
 Each successful deployment advances `expected_version` in `app.json`. A conflict means another publication changed the head: use `mew inspect` and review that release before deliberately updating the local version. A failed publication keeps its app identity, so retrying does not create another app.
 
+## Widget projects
+
+An `app.json` with `widgets` is a project folder. Each widget has a `type` (`page`, `panel`, `message` or `profile`), an `entry` (TypeScript or JavaScript) and/or an `html` template, plus type options. One optional `handler` entry exports a `new App()` from `mew-sdk/handler`. `mew deploy` bundles every entry with esbuild, including CSS, assets and npm dependencies from the folder's `node_modules`, reads the handler's registrations and publishes one version. Bundling needs the npm package (`npm i -g mew-sdk`).
+
+```json
+{
+  "name": "polls",
+  "expected_version": 0,
+  "permissions": ["storage:shared", "messages:post"],
+  "widgets": {
+    "dashboard": { "type": "page", "title": "Polls", "entry": "src/dashboard.ts" },
+    "poll": { "type": "message", "message_type": "poll", "max_height": 320, "entry": "src/poll.ts" }
+  },
+  "handler": "src/backend.ts"
+}
+```
+
+`mew-sdk/build` exports the same `buildProject` the CLI uses, so other tools produce identical versions.
+
 ## Installing
 
 Installation requires explicit permission acceptance:
