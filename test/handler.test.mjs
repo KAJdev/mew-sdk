@@ -92,9 +92,9 @@ test("http routes match params and strip dispatch headers", async () => {
 test("bot messages post app types and shared state retries conflicts", async () => {
   let revision = 1;
   const calls = stubFetch({
-    "POST https://api.mew.space/api/v1/channels/c1/messages": (body) => [201, { id: "m9", ...body }],
-    "GET https://api.mew.space/api/v1/app-installations/i1/state/shared": () => [200, { revision, value: { n: revision }, state_version: 1 }],
-    "PUT https://api.mew.space/api/v1/app-installations/i1/state/shared": (body) => {
+    "POST https://mew.space/api/v1/channels/c1/messages": (body) => [201, { id: "m9", ...body }],
+    "GET https://mew.space/api/v1/app-installations/i1/state/shared": () => [200, { revision, value: { n: revision }, state_version: 1 }],
+    "PUT https://mew.space/api/v1/app-installations/i1/state/shared": (body) => {
       if (body.expected_revision !== 2) { revision = 2; return [409, { message: "conflict" }]; }
       return [200, { revision: 3, value: body.value, state_version: 1 }];
     },

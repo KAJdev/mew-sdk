@@ -16,7 +16,7 @@ export MEW_TOKEN='your-account-token'
 mew deploy ./counter-app
 ```
 
-`MEW_API_URL` is the API base before `/v1` and defaults to `https://api.mew.space/api`. Remote bases require HTTPS; plain HTTP is accepted only for literal loopback addresses. Account tokens stay in the environment and are never written into app files, bundles or output, and the CLI does not follow redirects with credentials. A broad account token is not a scoped CI credential, so keep it out of shared CI.
+`MEW_API_URL` is the API base before `/v1` and defaults to `https://mew.space/api`. Remote bases require HTTPS; plain HTTP is accepted only for literal loopback addresses. Account tokens stay in the environment and are never written into app files, bundles or output, and the CLI does not follow redirects with credentials. A broad account token is not a scoped CI credential, so keep it out of shared CI.
 
 `app.json` holds app metadata, `app_id` after creation, `expected_version`, the version 1 manifest and relative `ui` and optional `handler` paths. The UI is one HTML document and the handler is bundled ESM JavaScript; TypeScript authors compile to those artifacts first. Artifact paths stay inside the app folder. Publication stores source and does not activate hosted handlers.
 

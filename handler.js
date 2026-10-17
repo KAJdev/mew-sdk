@@ -1,4 +1,4 @@
-const API = "https://api.mew.space/api";
+const API = "https://mew.space/api";
 const STORAGE = "https://storage.mew.internal";
 const EVENTS = new Set(["install", "update", "messageCreate", "mention", "memberJoin", "memberLeave"]);
 const METHODS = ["get", "post", "put", "patch", "delete"];
