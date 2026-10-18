@@ -1,3 +1,6 @@
+import type { Embed } from "./embeds.js";
+export type { Embed, CompactEmbed, RichEmbed, EmbedBadge, MessagePayload } from "./embeds.js";
+
 export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
 /** shared installation state: a json object of at most 16 KiB serialized, depth 16, finite numbers only */
@@ -44,6 +47,7 @@ export interface Message {
   readonly channel_id: string;
   readonly author: User & { readonly bot: boolean };
   readonly content: string;
+  readonly embeds?: readonly Embed[];
   readonly app?: { readonly installation_id: string; readonly type: string; readonly data: { [key: string]: JsonValue } } | null;
   readonly reply_to?: string | null;
   readonly mentions: readonly string[];
@@ -77,7 +81,7 @@ export interface Storage {
 export interface MewClient {
   request<T = unknown>(method: string, path: string, body?: unknown): Promise<T>;
   readonly messages: {
-    post(message: { content: string; type?: string; data?: { [key: string]: JsonValue }; channel_id?: string }): Promise<Message>;
+    post(message: { content: string; type?: string; data?: { [key: string]: JsonValue }; embeds?: Embed[]; channel_id?: string }): Promise<Message>;
     edit(id: string, change: { content?: string; data?: { [key: string]: JsonValue }; channel_id?: string }): Promise<Message>;
     delete(id: string, options?: { channel_id?: string }): Promise<void>;
     history(query?: { channel_id?: string; limit?: number; before_id?: string; after_id?: string }): Promise<Message[]>;

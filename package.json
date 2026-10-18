@@ -19,7 +19,7 @@
     "./sample.html": "./sample.html",
     "./package.json": "./package.json"
   },
-  "files": ["index.js", "index.d.ts", "dev.mjs", "dev.d.ts", "document.mjs", "document.d.ts", "handler.d.ts", "handler.js", "build.mjs", "build.d.ts", "assets.mjs", "bootstrap.js", "sample.html", "cli/bin", "cli/src", "examples", "README.md", "LICENSE"],
+  "files": ["index.js", "index.d.ts", "embeds.d.ts", "dev.mjs", "dev.d.ts", "document.mjs", "document.d.ts", "handler.d.ts", "handler.js", "build.mjs", "build.d.ts", "assets.mjs", "bootstrap.js", "sample.html", "cli/bin", "cli/src", "examples", "README.md", "LICENSE"],
   "sideEffects": false,
   "engines": { "node": ">=22" },
   "dependencies": { "esbuild": "0.28.2" },

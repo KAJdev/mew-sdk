@@ -1,3 +1,5 @@
+export type { Embed, CompactEmbed, RichEmbed, EmbedBadge, MessagePayload } from "./embeds.js";
+
 export type Scope = "private" | "shared" | "profile";
 export type State = { revision: number; value: Record<string, unknown>; state_version: number | null };
 export type StateUpdate = { expected_revision: number; value: Record<string, unknown> };
