@@ -3,25 +3,19 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Private notes</title>
 <style>
-  :root { --fg: var(--mew-primary, #d3f9d8); --dim: var(--mew-secondary, #a3a3a3); --bg: var(--mew-background, #101010); --soft: color-mix(in srgb, var(--fg) 6%, var(--bg)); color: var(--fg); background: var(--bg); font: 400 14px/1.6 var(--mew-font-sans, system-ui, sans-serif); font-synthesis: none; }
+  :root { --fg: var(--color-primary, var(--mew-primary, #e1e3e2)); --dim: var(--color-secondary, var(--mew-secondary, #a4a7a6)); --bg: var(--color-background, var(--mew-background, #111213)); --soft: var(--color-row, color-mix(in srgb, var(--fg) 6%, var(--bg))); color: var(--fg); background: var(--bg); font: 400 14px/1.6 var(--mew-font-sans, system-ui, sans-serif); font-synthesis: none; }
   * { box-sizing: border-box; }
   body { max-width: 800px; margin: 0 auto; padding: 24px; -webkit-font-smoothing: antialiased; }
   header { margin-bottom: 20px; }
   h1 { font-size: 24px; font-weight: 400; letter-spacing: -.025em; line-height: 1.25; margin: 0 0 8px; }
   p { margin: 8px 0; }
   .dim, #count, label, #status { color: var(--dim); }
-  textarea, button { font: inherit; font-weight: 400; color: inherit; background: var(--soft); border: 1px solid transparent; border-radius: 4px; padding: 8px 12px; }
-  button { border-radius: 2px; cursor: pointer; }
-  button:hover { background: color-mix(in srgb, var(--mew-primary, #d3f9d8) 8%, transparent); }
-  button:disabled { opacity: .5; cursor: default; }
   textarea { display: block; width: 100%; min-height: 340px; resize: vertical; margin-top: 8px; line-height: 1.7; }
-  :focus-visible { outline: 1px solid color-mix(in srgb, var(--fg) 45%, transparent); outline-offset: 2px; }
   .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 16px 0; }
-  #save { background: color-mix(in srgb, var(--fg) 12%, var(--bg)); }
   #count { font-size: 12px; }
   #conflict { background: var(--soft); border-left: 2px solid var(--dim); border-radius: 4px; padding: 16px; margin: 20px 0; }
   #conflict strong { font-weight: 400; font-size: 16px; }
-  summary { cursor: pointer; color: var(--dim); padding: 8px 0; }
+  summary { display: list-item; width: fit-content; }
   details { margin-top: 12px; }
   .footnote { font-size: 12px; }
   pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 200px; overflow: auto; font: inherit; }
@@ -33,12 +27,13 @@
 </head>
 <body>
 <header><h1>Private notes</h1><p class="dim">Only you can read these notes.</p></header>
-<label for="notes">Your notes</label><textarea id="notes" maxlength="8000" disabled placeholder="Capture an idea, make a list, work something out."></textarea>
-<div class="bar"><button id="save" disabled>Save notes</button><button id="retry" hidden>Retry loading</button><span id="status" role="status">Loading your notes…</span></div>
-<section id="conflict" hidden aria-label="Review saved version"><strong>Review the saved version</strong><p class="dim">Your draft is still in the editor. Compare it with the text currently stored before choosing what to keep.</p><pre id="remote"></pre><div class="bar"><button id="use">Use saved text</button><button id="keep">Keep my draft</button></div></section>
+<label for="notes">Your notes</label><textarea id="notes" class="ui-input" maxlength="8000" disabled placeholder="Capture an idea, make a list, work something out."></textarea>
+<div class="bar"><button id="save" class="ui-button" data-variant="primary" type="button" disabled>Save notes</button><button id="retry" class="ui-button" data-variant="secondary" type="button" hidden>Retry loading</button><span id="status" role="status">Loading your notes…</span></div>
+<section id="conflict" hidden aria-label="Review saved version"><strong>Review the saved version</strong><p class="dim">Your draft is still in the editor. Compare it with the text currently stored before choosing what to keep.</p><pre id="remote"></pre><div class="bar"><button id="use" class="ui-button" data-variant="secondary" type="button">Use saved text</button><button id="keep" class="ui-button" data-variant="secondary" type="button">Keep my draft</button></div></section>
 <p class="dim footnote">Save to keep your changes. Closing the app can discard unsaved text.</p>
-<details><summary>Tools</summary><div class="bar"><button id="focus" aria-pressed="false">Focus mode</button><button id="restore" disabled>Review saved text</button><span id="count">0 words · 0 / 8000 characters</span></div></details>
+<details><summary class="ui-button" data-variant="ghost">Tools</summary><div class="bar"><button id="focus" class="ui-button" data-variant="ghost" type="button" aria-pressed="false">Focus mode</button><button id="restore" class="ui-button" data-variant="secondary" type="button" disabled>Review saved text</button><span id="count">0 words · 0 / 8000 characters</span></div></details>
 <script>
+  mew.ui.install();
   const notes = document.querySelector('#notes');
   const status = document.querySelector('#status');
   const save = document.querySelector('#save');
