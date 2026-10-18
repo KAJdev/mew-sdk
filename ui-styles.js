@@ -29,7 +29,7 @@ export const controlStyles = `
   color: var(--color-on-action, var(--color-background));
 }
 .ui-button[data-variant='primary']:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--color-action, var(--color-highlight, var(--color-primary))) 88%, var(--color-on-action, var(--color-background)));
+  background: color-mix(in srgb, var(--color-action, var(--color-highlight, var(--color-primary))) 88%, var(--color-background));
 }
 .ui-button[data-variant='secondary'] {
   background: var(--color-tertiary);
@@ -55,7 +55,7 @@ export const controlStyles = `
   color: var(--color-on-danger, #fff);
 }
 .ui-button[data-variant='destructive']:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--color-danger, #b74952) 88%, var(--color-on-danger, #fff));
+  background: color-mix(in srgb, var(--color-danger, #b74952) 88%, var(--color-background));
 }
 .ui-button[role='menuitem'] { justify-content: flex-start; text-align: left; }
 .ui-button[data-icon-only='true'] { width: 32px; padding: 8px; }
@@ -92,10 +92,14 @@ export const controlStyles = `
 .ui-switch-thumb { display: block; width: 20px; height: 20px; border-radius: 9999px; background: var(--color-primary); }
 .ui-switch[aria-checked='true'] { background: var(--color-action, var(--color-highlight, var(--color-primary))); }
 .ui-switch[aria-checked='true'] .ui-switch-thumb { background: var(--color-on-action, var(--color-background)); transform: translateX(20px); }
-.ui-button:focus-visible, .ui-input:focus-visible, .ui-select:focus-visible, .ui-switch:focus-visible {
+.ui-button:focus-visible:not(:disabled), .ui-input:focus-visible, .ui-select:focus-visible, .ui-switch:focus-visible:not(:disabled) {
   outline: none;
-  box-shadow: inset 0 -2px 0 var(--color-focus, var(--color-secondary));
+  box-shadow: none;
+  background: var(--color-selected, var(--color-tertiary));
 }
+.ui-button[data-variant='secondary']:focus-visible:not(:disabled), .ui-switch:focus-visible:not(:disabled) { background: color-mix(in srgb, var(--color-tertiary) 78%, var(--color-primary)); }
+.ui-button[data-variant='primary']:focus-visible:not(:disabled), .ui-switch[aria-checked='true']:focus-visible:not(:disabled) { background: color-mix(in srgb, var(--color-action, var(--color-highlight, var(--color-primary))) 78%, var(--color-background)); }
+.ui-button[data-variant='destructive']:focus-visible:not(:disabled) { background: color-mix(in srgb, var(--color-danger, #b74952) 78%, var(--color-background)); }
 .ui-badge {
   display: inline-flex;
   align-items: center;
@@ -119,10 +123,11 @@ export const controlStyles = `
 @media (prefers-reduced-motion: reduce) { .ui-button { transition: none; } }
 @media (forced-colors: active) {
   .ui-button, .ui-input, .ui-select, .ui-switch { border: 1px solid ButtonText; }
-  .ui-button:focus-visible, .ui-input:focus-visible, .ui-select:focus-visible, .ui-switch:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; box-shadow: none; }
+  .ui-button[data-variant]:focus-visible:not(:disabled), .ui-input:focus-visible, .ui-select:focus-visible, .ui-switch[aria-checked]:focus-visible:not(:disabled) { forced-color-adjust: none; background: Highlight; color: HighlightText; outline: 2px solid Highlight; outline-offset: 2px; box-shadow: none; }
   .ui-button[data-variant='primary'], .ui-switch[aria-checked='true'] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
   .ui-switch-thumb { forced-color-adjust: none; background: ButtonText; }
   .ui-switch[aria-checked='true'] .ui-switch-thumb { background: HighlightText; }
+  .ui-switch:focus-visible:not(:disabled) .ui-switch-thumb { background: HighlightText; }
 }
 }
 `;
