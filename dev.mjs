@@ -30,7 +30,7 @@ html,body{height:100%;margin:0}body{display:flex;flex-direction:column;color:var
 nav{display:flex;gap:12px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--color-tertiary)}nav span{color:var(--color-secondary);margin-left:auto}
 button{font:inherit;color:inherit;background:var(--color-tertiary);border:0;padding:4px 10px;cursor:pointer}
 #status{padding:0 16px;color:var(--color-secondary)}iframe{flex:1;border:0;width:100%}
-</style></head><body><nav><strong>mew dev</strong><button id="reload">[ Reload app ]</button><button id="theme">[ Toggle theme ]</button><button id="reset">[ Reset state ]</button><span>local state only</span></nav><p id="status" role="status"></p><iframe id="frame" sandbox="allow-scripts" src="/sandbox" title="App"></iframe>
+</style></head><body><nav><strong>mew dev</strong><button id="reload">[ Reload app ]</button><button id="theme">[ Toggle theme ]</button><button id="reset">[ Reset state ]</button><span>local state only</span></nav><p id="status" role="status"></p><iframe id="frame" sandbox="allow-scripts" src="/sandbox?v=mew-app-v3" title="App"></iframe>
 <script nonce="${nonce}">
 const frame = document.getElementById("frame");
 const status = document.getElementById("status");
@@ -54,6 +54,18 @@ async function mount() {
     port.onmessage = async ({ data }) => {
       let request;
       try { request = JSON.parse(data); } catch { return fail("The app sent an invalid message."); }
+      if (request && ["rendered", "resize"].includes(request.type) && Object.keys(request).length === 4 && request.session === session && Number.isSafeInteger(request.height) && request.height >= 0 && request.height <= 10000 && Number.isSafeInteger(request.width) && request.width >= 0 && request.width <= 10000) return;
+      if (request && request.type === "open" && Object.keys(request).length === 4 && request.session === session && request.gesture === true && typeof request.url === "string") {
+        let link = null;
+        try { link = new URL(request.url); } catch { return; }
+        if ((link.protocol === "http:" || link.protocol === "https:") && !link.username && !link.password && confirm("open link to " + link.hostname + "?")) window.open(link.href, "_blank", "noopener,noreferrer");
+        return;
+      }
+      if (request?.method === "media.open" && request.session === session && request.id === lastId + 1 && Object.keys(request).length === 4) {
+        lastId = request.id;
+        port.postMessage(JSON.stringify({ type: "result", session, id: request.id, value: { status: "unsupported" } }));
+        return;
+      }
       if (!request || request.session !== session || request.id !== lastId + 1 || !["state.get","state.put"].includes(request.method) || !["private","shared"].includes(request.scope)) return fail("The app sent an invalid or replayed request.");
       lastId = request.id;
       const put = request.method === "state.put";
@@ -72,7 +84,7 @@ async function mount() {
   frame.contentWindow.postMessage({ protocol: "mew-app-v1", type: "challenge", session }, "*");
   window.sendTheme = () => port?.postMessage(JSON.stringify({ type: "theme", session, theme: theme() }));
 }
-const reload = () => { close(); frame.src = "/sandbox"; };
+const reload = () => { close(); frame.src = "/sandbox?v=mew-app-v3"; };
 frame.addEventListener("load", mount);
 document.getElementById("reload").onclick = reload;
 document.getElementById("theme").onclick = () => { document.documentElement.classList.toggle("light"); window.sendTheme?.(); };
@@ -104,7 +116,7 @@ export async function createDevServer({ folder = ".", host = "127.0.0.1", port =
         }).end(hostPage(nonce));
         return;
       }
-      if (request.method === "GET" && url.pathname === "/sandbox") return response.writeHead(200, sandbox.headers).end(sandbox.html);
+      if (request.method === "GET" && url.pathname === "/sandbox" && url.search === "?v=mew-app-v3") return response.writeHead(200, sandbox.headers).end(sandbox.html);
       if (request.method === "GET" && url.pathname === "/app") return json(response, 200, await loadApp(dir));
       if (request.method === "GET" && url.pathname === "/events") {
         response.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-store" }).write(": connected\n\n");

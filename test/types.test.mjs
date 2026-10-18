@@ -51,6 +51,14 @@ export default {
     "frame.ts": `import type { State, Theme } from "mew-sdk";
 const state: Promise<State> = mew.state.get("shared");
 const theme: Theme = mew.theme.get();
+const userMessage = mew.messages.post({ type: "poll", data: {}, content: "poll" });
+// @ts-expect-error widget posts have no author selector
+mew.messages.post({ type: "poll", data: {}, content: "poll", as: "app" });
+// @ts-expect-error widget posts have no author selector
+mew.messages.post({ type: "poll", data: {}, content: "poll", as: "user" });
+// @ts-expect-error private server identity is not an sdk field
+mew.messages.post({ type: "poll", data: {}, content: "poll", triggered_by: "viewer" });
+void userMessage;
 void state; void theme;
 `,
   });

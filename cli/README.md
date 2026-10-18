@@ -33,7 +33,7 @@ An `app.json` with `widgets` is a project folder. Each widget has a `type` (`pag
   "permissions": ["storage:shared", "messages:post"],
   "widgets": {
     "dashboard": { "type": "page", "title": "Polls", "entry": "src/dashboard.ts" },
-    "poll": { "type": "message", "message_type": "poll", "max_height": 320, "entry": "src/poll.ts" }
+    "poll": { "type": "message", "message_type": "poll", "entry": "src/poll.ts" }
   },
   "handler": "src/backend.ts"
 }

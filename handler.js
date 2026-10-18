@@ -37,9 +37,12 @@ function pattern(path) {
   const keys = [];
   const source = path.split("/").map((part) => {
     if (part.startsWith(":")) {
-      keys.push(part.slice(1));
+      const key = part.slice(1);
+      if (!/^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(key) || keys.includes(key)) throw new TypeError("route parameters are distinct identifiers");
+      keys.push(key);
       return "([^/]+)";
     }
+    if (part && !/^[A-Za-z0-9._~-]+$/.test(part)) throw new TypeError("route path segments use URL-safe characters");
     return part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }).join("/");
   return { regex: new RegExp(`^${source}/?$`), keys };
@@ -52,8 +55,8 @@ function json(status, value) {
   });
 }
 
-function storage(installationId) {
-  const op = (name, body) => call(`${STORAGE}/${name}`, "POST", { installation_id: installationId, ...body });
+function storage() {
+  const op = (name, body) => call(`${STORAGE}/${name}`, "POST", body);
   return {
     async get(key) {
       const { value } = await op("get", { key });
@@ -184,14 +187,15 @@ export class App {
 
   async fetch(request, env, executionContext) {
     const kind = request.headers.get("x-mew-kind");
+    const encodedEnvelope = request.headers.get("x-mew-envelope") ?? "";
     const envelope = kind === "http"
-      ? JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(request.headers.get("x-mew-envelope") ?? ""), (c) => c.charCodeAt(0))))
+      ? JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(encodedEnvelope.replaceAll("-", "+").replaceAll("_", "/") + "=".repeat((4 - encodedEnvelope.length % 4) % 4)), (c) => c.charCodeAt(0))))
       : await request.json();
     const installation = envelope.installation;
     const ctx = {
       installation,
       env,
-      storage: storage(installation.id),
+      storage: storage(),
       state: { shared: shared(installation.id) },
       realtime: {
         publish: (topic, data, options = {}) => call(`${API}/v1/app-installations/${installation.id}/realtime`, "POST", { topic, data, ...options }),
