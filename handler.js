@@ -102,8 +102,9 @@ function client(installation) {
   return {
     request,
     messages: {
-      post({ content, type, data, channel_id } = {}) {
+      post({ content, type, data, embeds, channel_id } = {}) {
         const body = { content };
+        if (embeds !== undefined) body.embeds = embeds;
         if (type !== undefined) body.app = { type, data: data ?? {} };
         return request("POST", `/v1/channels/${channel(channel_id)}/messages`, body);
       },

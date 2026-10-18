@@ -118,6 +118,20 @@ console.log(server.url);
 
 The folder needs an `app.json` with a relative `ui` path and `manifest.permissions`. The server listens on loopback only. `mew-sdk/document` exports the sandbox document and response policy generator, `mew-sdk/bootstrap.js` the frame bootstrap and `mew-sdk/sample.html` the counter example that `mew init` scaffolds.
 
+## Message embeds
+
+`Embed`, `CompactEmbed`, `RichEmbed` and `MessagePayload` are exported types from `mew-sdk` and `mew-sdk/handler`. Messages accept at most 10 discriminated embeds. Compact rows use `type: "compact"`, nonblank `content` of up to 1024 Unicode code points, optional HTTP(S) `link` of up to 2048 characters, optional `#RRGGBB` `color`, and optional `badge: { text }` of up to 32 characters. Badge text is a content label, never trusted identity. URLs cannot contain credentials, whitespace or control characters. Compact text wraps fully and supports safe inline Markdown, not HTML or images.
+
+```ts
+import type { MessagePayload } from "mew-sdk";
+
+const payload: MessagePayload = {
+  embeds: [{ type: "compact", content: "**Search** finds messages across channels.", badge: { text: "Improved" } }],
+};
+```
+
+Send this body through an authorized message endpoint or an incoming channel webhook. Hosted handlers can attach `embeds` to a declared widget post with `ctx.mew.messages.post({ type, data, content, embeds })`; widget type, fallback content, installation scope and `messages:post_as_app` remain required. The frame SDK's widget-post contract is separate. Rich embeds use `type: "rich"` with optional `title`, `description`, `footer`, `color`, `url`, `image_url`, `video_url` and `audio_url` fields. See [message embeds](https://mew.space/docs/embeds) for limits and examples.
+
 ## Examples
 
 - `sample.html`: a shared counter and a private note, scaffolded by `mew init`.
