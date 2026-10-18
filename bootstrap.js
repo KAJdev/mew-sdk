@@ -1,4 +1,4 @@
-function bootstrap(hostOrigins, createUI, controlStyles, controlTheme) {
+function bootstrap(hostOrigins, createUI, controlStyles, controlTheme, uiFontSource) {
   "use strict";
   const protocol = "mew-app-v1";
   let session = null;
@@ -176,7 +176,7 @@ function bootstrap(hostOrigins, createUI, controlStyles, controlTheme) {
 
   const sdk = Object.freeze({
     version: 1,
-    ui: createUI(controlStyles, controlTheme),
+    ui: createUI(controlStyles, controlTheme, uiFontSource),
     get context() { return context; },
     call: (name, args) => send({ method: "backend.call", name, args: args === undefined ? null : args }),
     open,

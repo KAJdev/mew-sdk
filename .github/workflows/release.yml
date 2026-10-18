@@ -58,13 +58,14 @@ jobs:
         working-directory: dist
         run: |
           cp ../install.sh ../install.ps1 .
-          sha256sum mew-* install.sh install.ps1 > SHA256SUMS
+          sha256sum mew-* Geist-OFL.txt install.sh install.ps1 > SHA256SUMS
           cat SHA256SUMS
       - run: ./dist/mew-linux-x64 --version
       - uses: actions/attest-build-provenance@v2
         with:
           subject-path: |
             dist/mew-*
+            dist/Geist-OFL.txt
             dist/install.sh
             dist/install.ps1
       - name: Publish release

@@ -16,12 +16,15 @@ export function controlTheme(source) {
   return result;
 }
 
-export function createUI(controlStyles, validateTheme) {
+export function createUI(controlStyles, validateTheme, fontSource) {
   let watching = false;
+  let fontInstalled = false;
+  const fontFamily = "Geist";
   let projected = [];
 
   function applyTheme(theme) {
     const tokens = validateTheme(theme?.controls);
+    tokens["--mew-font-sans"] ??= `${fontFamily}, sans-serif`;
     const root = document.documentElement;
     for (const key of projected) if (!Object.hasOwn(tokens, key)) root.style.removeProperty(key);
     for (const [key, value] of Object.entries(tokens)) root.style.setProperty(key, value);
@@ -29,6 +32,15 @@ export function createUI(controlStyles, validateTheme) {
   }
 
   function install() {
+    if (!fontInstalled) {
+      fontInstalled = true;
+      try {
+        const bytes = Uint8Array.from(atob(fontSource), (character) => character.charCodeAt(0));
+        const face = new FontFace(fontFamily, bytes.buffer, { style: "normal", weight: "100 900", display: "swap" });
+        document.fonts.add(face);
+        face.load().catch(() => document.fonts.delete(face));
+      } catch {}
+    }
     let style = document.head.querySelector('style[data-mew-ui="controls"]');
     if (!style) {
       style = document.createElement("style");
