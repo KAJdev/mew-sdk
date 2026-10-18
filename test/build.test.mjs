@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import * as esbuild from "esbuild";
-import { buildProject } from "../build.mjs";
+import { buildProject, checkConfig } from "../build.mjs";
 import { describeInVm } from "../cli/src/project.js";
 
 const handlerSource = readFileSync(new URL("../handler.js", import.meta.url), "utf8");
@@ -16,7 +16,7 @@ const files = () => ({
     permissions: ["storage:shared", "messages:post"],
     widgets: {
       dashboard: { type: "page", title: "Polls", entry: "src/dashboard.ts" },
-      poll: { type: "message", message_type: "poll", max_height: 320, entry: "src/poll.ts", html: "src/poll.html" },
+      poll: { type: "message", message_type: "poll", entry: "src/poll.ts", html: "src/poll.html" },
       top: { type: "panel", anchors: ["top"], html: "src/top.html" },
     },
     handler: "src/backend.ts",
@@ -38,7 +38,7 @@ test("builds widgets, the handler and its registrations", async () => {
     permissions: ["storage:shared", "messages:post"],
     widgets: {
       dashboard: { type: "page", title: "Polls" },
-      poll: { type: "message", message_type: "poll", max_height: 320 },
+      poll: { type: "message", message_type: "poll" },
       top: { type: "panel", anchors: ["top"] },
     },
     handler: { events: ["messageCreate"], actions: ["vote"], crons: ["*/5 * * * *"], routes: [{ method: "POST", path: "/hook" }] },
@@ -56,6 +56,22 @@ test("output is deterministic", async () => {
   const a = await buildProject(files(), { esbuild, describe: describeInVm, modules });
   const b = await buildProject(files(), { esbuild, describe: describeInVm, modules });
   assert.deepEqual(a, b);
+});
+
+test("widget manifests declare content and placement without dimensions", () => {
+  const widgets = {
+    message: { type: "message", message_type: "poll", html: "widget.html" },
+    profile: { type: "profile", html: "widget.html" },
+    panel: { type: "panel", anchors: ["top"], html: "widget.html" },
+  };
+  assert.deepEqual(checkConfig({ widgets }).widgets, {
+    message: { type: "message", message_type: "poll" },
+    profile: { type: "profile" },
+    panel: { type: "panel", anchors: ["top"] },
+  });
+  for (const [name, key] of [["message", "max_height"], ["panel", "max_height"], ["profile", "height"]]) {
+    assert.throws(() => checkConfig({ widgets: { [name]: { ...widgets[name], [key]: 160 } } }), new RegExp(`does not take ${key}`));
+  }
 });
 
 test("rejects npm dependencies without a resolve directory, bad widgets and duplicate message types", async () => {
@@ -88,4 +104,31 @@ test("resolves npm dependencies from the project folder when given one", async (
   project["src/label.ts"] = "import shout from 'shout';\nexport const label = (n: number) => shout(`polls: ${n}`);\n";
   const built = await buildProject(project, { esbuild, describe: describeInVm, modules, resolveDir: dir });
   assert.match(built.widgets.dashboard.js, /toUpperCase/);
+});
+
+test("checkConfig reports app.json problems before bundling", () => {
+  const config = JSON.parse(files()["app.json"]);
+  assert.deepEqual(Object.keys(checkConfig(config).widgets), ["dashboard", "poll", "top"]);
+  assert.throws(() => checkConfig({ ...config, widgets: {} }), /at least one widget/);
+  assert.throws(() => checkConfig({ ...config, widgets: { top: { type: "panel", anchors: [], html: "a.html" } } }), /anchors/);
+  assert.throws(() => checkConfig({ ...config, widgets: { a: { type: "message", message_type: "x", entry: "a.ts" }, b: { type: "message", message_type: "x", entry: "b.ts" } } }), /declared twice/);
+  assert.throws(() => checkConfig({ ...config, handler: 3 }), /file path/);
+  assert.throws(() => checkConfig({ ...config, widgets: { top: { type: "page", html: 5 } } }), /html must be a file path/);
+  assert.throws(() => checkConfig({ ...config, state_version: 2 }), /state_version must be 1/);
+});
+
+test("chatbar widgets bind to a declared user-posted message type", () => {
+  const config = JSON.parse(files()["app.json"]);
+  config.widgets.compose = { type: "chatbar", message_type: "poll", title: "Create a poll", entry: "src/poll.ts" };
+  assert.deepEqual(checkConfig(config).widgets.compose, { type: "chatbar", message_type: "poll", title: "Create a poll" });
+  config.permissions = ["storage:shared"];
+  assert.throws(() => checkConfig(config), /messages:post/);
+  config.permissions = ["messages:post"];
+  config.widgets.compose.message_type = "missing";
+  assert.throws(() => checkConfig(config), /declared message_type/);
+});
+
+test("a widget whose entry builds to nothing is refused", async () => {
+  const empty = { "app.json": JSON.stringify({ widgets: { main: { type: "page", entry: "main.ts" } } }), "main.ts": "" };
+  await assert.rejects(buildProject(empty, { esbuild }), /builds to nothing/);
 });

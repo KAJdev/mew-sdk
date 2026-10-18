@@ -89,7 +89,7 @@ export interface MewClient {
 }
 
 export interface Context<Env = Record<string, string>> {
-  readonly installation: { readonly id: string; readonly app_id: string; readonly channel_id: string; readonly personal: boolean };
+  readonly installation: { readonly id: string; readonly app_id: string; readonly channel_id: string | null; readonly personal: boolean };
   readonly env: Env;
   readonly storage: Storage;
   readonly state: { readonly shared: SharedState };

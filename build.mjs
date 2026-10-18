@@ -9,7 +9,8 @@ const TEXT = /\.(?:[cm]?[jt]sx?|css|html|json|md|txt|svg)$/;
 
 const bytes = (value) => new TextEncoder().encode(value).length;
 
-function normalize(path) {
+/** resolves . and .. segments and backslashes in a project-relative path; throws when it leaves the project */
+export function normalize(path) {
   const parts = [];
   for (const part of path.replace(/\\/g, "/").split("/")) {
     if (!part || part === ".") continue;
@@ -25,16 +26,15 @@ function join(base, relative) {
   return normalize(`${base.split("/").slice(0, -1).join("/")}/${relative}`);
 }
 
-function between(value, min, max) {
-  return Number.isInteger(value) && value >= min && value <= max;
-}
-
 function widgetManifest(name, widget) {
   if (!WIDGET_NAME.test(name)) throw new Error(`widget name ${name} must match ${WIDGET_NAME}`);
   if (!widget || typeof widget !== "object") throw new Error(`widget ${name} must be an object`);
+  for (const key of ["entry", "html"]) {
+    if (widget[key] !== undefined && (typeof widget[key] !== "string" || !widget[key])) throw new Error(`widget ${name} ${key} must be a file path`);
+  }
   if (!widget.entry && !widget.html) throw new Error(`widget ${name} needs an entry, an html template or both`);
   const { type } = widget;
-  const allowed = { page: ["title"], panel: ["anchors", "max_height"], message: ["message_type", "max_height"], profile: ["height"] }[type];
+  const allowed = { page: ["title"], panel: ["anchors"], message: ["message_type"], profile: [], chatbar: ["message_type", "title"] }[type];
   if (!allowed) throw new Error(`widget ${name} has unknown type ${type}`);
   for (const key of Object.keys(widget)) {
     if (!["type", "entry", "html", ...allowed].includes(key)) throw new Error(`widget ${name} does not take ${key}`);
@@ -53,13 +53,11 @@ function widgetManifest(name, widget) {
     if (typeof widget.message_type !== "string" || !MESSAGE_TYPE.test(widget.message_type)) throw new Error(`widget ${name} message_type must match ${MESSAGE_TYPE}`);
     out.message_type = widget.message_type;
   }
-  if ((type === "panel" || type === "message") && widget.max_height !== undefined) {
-    if (!between(widget.max_height, 48, 480)) throw new Error(`widget ${name} max_height must be 48 to 480`);
-    out.max_height = widget.max_height;
-  }
-  if (type === "profile" && widget.height !== undefined) {
-    if (!between(widget.height, 48, 480)) throw new Error(`widget ${name} height must be 48 to 480`);
-    out.height = widget.height;
+  if (type === "chatbar") {
+    if (typeof widget.message_type !== "string" || !MESSAGE_TYPE.test(widget.message_type)) throw new Error(`widget ${name} message_type must match ${MESSAGE_TYPE}`);
+    if (widget.title !== undefined && (typeof widget.title !== "string" || !widget.title.trim() || [...widget.title].length > 100)) throw new Error(`widget ${name} title must be 1 to 100 characters`);
+    out.message_type = widget.message_type;
+    if (widget.title !== undefined) out.title = widget.title;
   }
   return out;
 }
@@ -115,6 +113,38 @@ async function bundle(esbuild, files, entry, options, plugin) {
 }
 
 /**
+ * checks a parsed app.json and returns the manifest it describes, without handler
+ * registrations. buildProject runs the same checks before bundling.
+ */
+export function checkConfig(config) {
+  if (!config || typeof config !== "object" || Array.isArray(config)) throw new Error("app.json must be an object");
+  const permissions = config.permissions ?? [];
+  if (!Array.isArray(permissions) || permissions.some((p) => typeof p !== "string") || new Set(permissions).size !== permissions.length) throw new Error("permissions must be distinct strings");
+  if (!config.widgets || typeof config.widgets !== "object" || Array.isArray(config.widgets) || !Object.keys(config.widgets).length) throw new Error("app.json needs at least one widget");
+  if (config.handler !== undefined && (typeof config.handler !== "string" || !config.handler)) throw new Error("handler must be a file path");
+  if (config.state_version !== undefined && config.state_version !== 1) throw new Error("state_version must be 1");
+  const types = new Set();
+  const manifest = { sdk_version: 2, state_version: 1, permissions, widgets: {} };
+  for (const name of Object.keys(config.widgets).sort()) {
+    const widget = config.widgets[name];
+    manifest.widgets[name] = widgetManifest(name, widget);
+    if (widget.type === "message") {
+      if (types.has(widget.message_type)) throw new Error(`message type ${widget.message_type} is declared twice`);
+      types.add(widget.message_type);
+    }
+  }
+  if (config.home !== undefined) {
+    if (typeof config.home !== "string" || config.widgets[config.home]?.type !== "page") throw new Error("home must name a page widget");
+    manifest.home = config.home;
+  } else if (Object.values(config.widgets).some((widget) => widget.type !== "profile")) {
+    throw new Error("apps with page, panel, message or chatbar widgets need a home page widget");
+  }
+  const chatbars = Object.values(config.widgets).filter((widget) => widget?.type === "chatbar");
+  if (chatbars.length && (!permissions.includes("messages:post") || chatbars.some((widget) => !types.has(widget.message_type)))) throw new Error("chatbar widgets need messages:post and a declared message_type");
+  return manifest;
+}
+
+/**
  * builds an app project into a publishable version. files maps project-relative paths
  * to text (or bytes for assets); esbuild is the esbuild or esbuild-wasm module; describe
  * evaluates the commonjs handler bundle in an isolated context and returns app.describe().
@@ -124,21 +154,12 @@ export async function buildProject(files, { esbuild, describe, modules = {}, res
   if (!esbuild?.build) throw new Error("buildProject needs an esbuild module");
   if (!files["app.json"]) throw new Error("app.json is missing");
   const config = JSON.parse(files["app.json"]);
-  const permissions = config.permissions ?? [];
-  if (!Array.isArray(permissions) || permissions.some((p) => typeof p !== "string") || new Set(permissions).size !== permissions.length) throw new Error("permissions must be distinct strings");
-  if (!config.widgets || typeof config.widgets !== "object" || !Object.keys(config.widgets).length) throw new Error("app.json needs at least one widget");
-  const types = new Set();
-  const manifest = { sdk_version: 2, state_version: config.state_version ?? 1, permissions, widgets: {} };
+  const manifest = checkConfig(config);
   const widgets = {};
   const plugin = projectPlugin(files, modules, resolveDir);
   const shared = resolveDir ? { absWorkingDir: resolveDir, nodePaths: [`${resolveDir}/node_modules`] } : {};
   for (const name of Object.keys(config.widgets).sort()) {
     const widget = config.widgets[name];
-    manifest.widgets[name] = widgetManifest(name, widget);
-    if (widget.type === "message") {
-      if (types.has(widget.message_type)) throw new Error(`message type ${widget.message_type} is declared twice`);
-      types.add(widget.message_type);
-    }
     const artifact = {};
     if (widget.html) {
       const html = files[normalize(widget.html)];
@@ -150,6 +171,7 @@ export async function buildProject(files, { esbuild, describe, modules = {}, res
       if (out.js) artifact.js = out.js;
       if (out.css) artifact.css = out.css;
     }
+    if (!Object.keys(artifact).length) throw new Error(`widget ${name} entry ${widget.entry} builds to nothing; add code to it`);
     if (bytes(artifact.html ?? "") + bytes(artifact.js ?? "") + bytes(artifact.css ?? "") > WIDGET_BYTES) throw new Error(`widget ${name} is larger than 2 MiB`);
     widgets[name] = artifact;
   }

@@ -66,7 +66,7 @@ test("dev server serves the production sandbox document and enforces local state
   const origin = new URL(server.url).origin;
   const host = await fetch(server.url);
   assert.match(host.headers.get("content-security-policy"), /frame-src 'self'/);
-  const sandbox = await fetch(`${origin}/sandbox`);
+  const sandbox = await fetch(`${origin}/sandbox?v=mew-app-v3`);
   assert.match(sandbox.headers.get("content-security-policy"), new RegExp(`frame-ancestors ${origin}; sandbox allow-scripts$`));
   assert.match(await sandbox.text(), /mew-app-v1/);
   assert.equal((await (await fetch(`${origin}/app`)).json()).html.includes("Shared counter"), true);
