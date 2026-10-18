@@ -15,6 +15,7 @@ const inlineAssets = {
       contents: `export const bootstrapSource = ${JSON.stringify(await readFile(path.join(root, "bootstrap.js"), "utf8"))};\n` +
         `export const sampleHtml = ${JSON.stringify(await readFile(path.join(root, "sample.html"), "utf8"))};\n` +
         `export const handlerSource = ${JSON.stringify(await readFile(path.join(root, "handler.js"), "utf8"))};\n` +
+        `export const uiSource = ${JSON.stringify(await readFile(path.join(root, "ui.js"), "utf8"))};\n` +
         `export const version = ${JSON.stringify(version)};\n`,
     }));
   },

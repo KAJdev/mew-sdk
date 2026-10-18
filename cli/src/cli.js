@@ -2,7 +2,7 @@ import { mkdir, readFile, realpath, rename, stat, writeFile } from 'node:fs/prom
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { ApiClient } from './client.js';
-import { handlerSource, sampleHtml, version } from '../../assets.mjs';
+import { handlerSource, sampleHtml, uiSource, version } from '../../assets.mjs';
 import { buildProject } from '../../build.mjs';
 import { collect, describeInVm } from './project.js';
 
@@ -118,7 +118,7 @@ export async function run(args, { env = process.env, output = console.log } = {}
       const esbuild = await import('esbuild').catch(() => {
         throw new Error('Bundling needs the npm package: npm i -g mew-sdk');
       });
-      const built = await buildProject(await collect(dir), { esbuild, describe: describeInVm, modules: { 'mew-sdk/handler': handlerSource }, resolveDir: dir });
+      const built = await buildProject(await collect(dir), { esbuild, describe: describeInVm, modules: { 'mew-sdk/handler': handlerSource, 'mew-sdk/ui': uiSource }, resolveDir: dir });
       if (!config.app_id) {
         if (config.expected_version !== 0) throw new Error('A new app must have expected_version 0');
         const app = await api.request('apps', 'POST', { name: config.name, description: config.description, visibility: config.visibility });

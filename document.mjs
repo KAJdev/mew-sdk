@@ -1,4 +1,6 @@
 import { createHash } from "node:crypto";
+import { createUI, controlTheme } from "./ui-runtime.js";
+import { controlStyles } from "./ui-styles.js";
 
 export function normalizeHostOrigins(value) {
   const origins = Array.isArray(value) ? value : typeof value === "string" ? value.split(",").map((item) => item.trim()) : [];
@@ -26,7 +28,7 @@ export function sandboxHeaders(hostOrigins) {
 export function sandboxDocument(hostOrigins, bootstrap) {
   const origins = normalizeHostOrigins(hostOrigins);
   const headers = sandboxHeaders(origins);
-  const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><script>(${bootstrap})(${JSON.stringify(origins).replaceAll("<", "\\u003c")})</script></body></html>`;
+  const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><script>(${bootstrap})(${JSON.stringify(origins).replaceAll("<", "\\u003c")},${createUI.toString()},${JSON.stringify(controlStyles).replaceAll("<", "\\u003c")},${controlTheme.toString()})</script></body></html>`;
   const etag = `"${createHash("sha256").update(html).digest("hex")}"`;
   return { headers, html, etag, cachedHeaders: { ...headers, "Cache-Control": "public, max-age=3600", ETag: etag } };
 }
