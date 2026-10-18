@@ -1,4 +1,5 @@
 export const controlStyles = `
+@layer components {
 .ui-button, .ui-input, .ui-select, .ui-switch {
   box-sizing: border-box;
   font-family: var(--mew-font-sans, var(--font-sans, system-ui, sans-serif));
@@ -57,6 +58,8 @@ export const controlStyles = `
   background: color-mix(in srgb, var(--color-danger, #b74952) 88%, var(--color-on-danger, #fff));
 }
 .ui-button[role='menuitem'] { justify-content: flex-start; text-align: left; }
+.ui-button[data-icon-only='true'] { width: 32px; padding: 8px; }
+.ui-button .tui-spinner { color: inherit; }
 .ui-button:active:not(:disabled) { filter: brightness(.94); }
 .ui-button:disabled, .ui-input:disabled, .ui-select:disabled, .ui-switch:disabled { opacity: .45; cursor: not-allowed; }
 .ui-input, .ui-select {
@@ -110,6 +113,7 @@ export const controlStyles = `
 @media (max-width: 767px) {
   .ui-button, .ui-input, .ui-select { min-height: 40px; font-size: 16px; }
   .ui-button { padding-block: 10px; }
+  .ui-button[data-icon-only='true'] { width: 40px; padding: 8px; }
   .ui-input, .ui-select { padding-block: 9px; }
 }
 @media (prefers-reduced-motion: reduce) { .ui-button { transition: none; } }
@@ -119,5 +123,6 @@ export const controlStyles = `
   .ui-button[data-variant='primary'], .ui-switch[aria-checked='true'] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
   .ui-switch-thumb { forced-color-adjust: none; background: ButtonText; }
   .ui-switch[aria-checked='true'] .ui-switch-thumb { background: HighlightText; }
+}
 }
 `;
