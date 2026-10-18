@@ -120,7 +120,7 @@ The folder needs an `app.json` with a relative `ui` path and `manifest.permissio
 
 ## Message embeds
 
-`Embed`, `CompactEmbed`, `RichEmbed` and `MessagePayload` are exported types from `mew-sdk` and `mew-sdk/handler`. Messages accept at most 10 discriminated embeds. Compact rows use `type: "compact"`, nonblank `content` of up to 1024 Unicode code points, optional HTTP(S) `link` of up to 2048 characters, optional `#RRGGBB` `color`, and optional `badge: { text }` of up to 32 characters. Badge text is a content label, never trusted identity. URLs cannot contain credentials, whitespace or control characters. Compact text wraps fully and supports safe inline Markdown, not HTML or images.
+`Embed`, `CompactEmbed`, `RichEmbed` and `MessagePayload` are exported types from `mew-sdk` and `mew-sdk/handler`. Messages accept at most 10 discriminated embeds. Compact rows use `type: "compact"`, nonblank `content` of up to 1024 Unicode code points, optional HTTP(S) `link` of up to 2048 characters, optional `#RRGGBB` `color`, and optional `badge: { text }` of up to 32 characters. Badge text is a content label, never trusted identity. URLs cannot contain credentials, whitespace or control characters. Compact text occupies one line with a full-text expansion control and supports safe inline Markdown, not HTML or images.
 
 ```ts
 import type { MessagePayload } from "mew-sdk";
