@@ -3,37 +3,41 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Private notes</title>
 <style>
-  :root { color: var(--mew-primary, #d3f9d8); background: var(--mew-background, #101010); font: 13px/1.6 ui-monospace, monospace; }
+  :root { --fg: var(--mew-primary, #d3f9d8); --dim: var(--mew-secondary, #a3a3a3); --bg: var(--mew-background, #101010); --soft: color-mix(in srgb, var(--fg) 6%, var(--bg)); color: var(--fg); background: var(--bg); font: 400 14px/1.6 var(--mew-font-sans, system-ui, sans-serif); font-synthesis: none; }
   * { box-sizing: border-box; }
-  body { max-width: 960px; margin: 0 auto; padding: 32px 24px; }
-  header { border-bottom: 1px solid var(--mew-tertiary, #3f3f3f); margin-bottom: 24px; padding-bottom: 24px; }
-  h1 { font-size: clamp(26px, 4vw, 36px); letter-spacing: -.06em; line-height: 1.2; margin: 8px 0 12px; }
+  body { max-width: 800px; margin: 0 auto; padding: 24px; -webkit-font-smoothing: antialiased; }
+  header { margin-bottom: 20px; }
+  h1 { font-size: 24px; font-weight: 400; letter-spacing: -.025em; line-height: 1.25; margin: 0 0 8px; }
   p { margin: 8px 0; }
-  .dim, #count, label { color: var(--mew-secondary, #a3a3a3); }
-  .eyebrow { font-size: 10px; text-transform: uppercase; letter-spacing: .16em; }
-  textarea, button { font: inherit; color: inherit; background: transparent; border: 1px solid var(--mew-tertiary, #3f3f3f); border-radius: 0; padding: 9px 12px; }
-  button { cursor: pointer; }
+  .dim, #count, label, #status { color: var(--dim); }
+  textarea, button { font: inherit; font-weight: 400; color: inherit; background: var(--soft); border: 1px solid transparent; border-radius: 4px; padding: 8px 12px; }
+  button { border-radius: 2px; cursor: pointer; }
   button:hover { background: color-mix(in srgb, var(--mew-primary, #d3f9d8) 8%, transparent); }
   button:disabled { opacity: .5; cursor: default; }
-  textarea { display: block; width: 100%; min-height: 340px; resize: vertical; margin-top: 10px; line-height: 1.8; }
-  :focus-visible { outline: 2px solid var(--mew-primary, #d3f9d8); outline-offset: 3px; }
+  textarea { display: block; width: 100%; min-height: 340px; resize: vertical; margin-top: 8px; line-height: 1.7; }
+  :focus-visible { outline: 1px solid color-mix(in srgb, var(--fg) 45%, transparent); outline-offset: 2px; }
   .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 16px 0; }
-  #count { margin-left: auto; }
-  #conflict { border: 1px solid var(--mew-tertiary, #3f3f3f); padding: 16px; margin: 20px 0; }
+  #save { background: color-mix(in srgb, var(--fg) 12%, var(--bg)); }
+  #count { font-size: 12px; }
+  #conflict { background: var(--soft); border-left: 2px solid var(--dim); border-radius: 4px; padding: 16px; margin: 20px 0; }
+  #conflict strong { font-weight: 400; font-size: 16px; }
+  summary { cursor: pointer; color: var(--dim); padding: 8px 0; }
+  details { margin-top: 12px; }
+  .footnote { font-size: 12px; }
   pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 200px; overflow: auto; font: inherit; }
   [hidden] { display: none !important; }
-  body.focus header, body.focus .footnote { display: none; }
+  body.focus header { display: none; }
   body.focus textarea { min-height: 70vh; }
   @media (max-width: 480px) { body { padding: 20px 14px; } #count { width: 100%; margin: 0; } }
 </style>
 </head>
 <body>
-<header><div class="eyebrow dim">private notes</div><h1>A little room to think.</h1><p class="dim">A private scratchpad for this installation. Write a draft, review it and save when you're ready.</p></header>
-<div class="bar"><button id="focus" aria-pressed="false">Focus mode</button><span id="count">0 words · 0 / 8000 characters</span></div>
+<header><h1>Private notes</h1><p class="dim">Only you can read these notes.</p></header>
 <label for="notes">Your notes</label><textarea id="notes" maxlength="8000" disabled placeholder="Capture an idea, make a list, work something out."></textarea>
-<div class="bar"><button id="save" disabled>Save notes</button><button id="restore" disabled>Restore saved text</button><button id="retry" hidden>Retry loading</button><span id="status" role="status">Loading your notes…</span></div>
+<div class="bar"><button id="save" disabled>Save notes</button><button id="retry" hidden>Retry loading</button><span id="status" role="status">Loading your notes…</span></div>
 <section id="conflict" hidden aria-label="Review saved version"><strong>Review the saved version</strong><p class="dim">Your draft is still in the editor. Compare it with the text currently stored before choosing what to keep.</p><pre id="remote"></pre><div class="bar"><button id="use">Use saved text</button><button id="keep">Keep my draft</button></div></section>
-<p class="dim footnote">Only you can read these notes. Changes stay in the editor until you save. Closing the app can discard unsaved text.</p>
+<p class="dim footnote">Save to keep your changes. Closing the app can discard unsaved text.</p>
+<details><summary>Tools</summary><div class="bar"><button id="focus" aria-pressed="false">Focus mode</button><button id="restore" disabled>Review saved text</button><span id="count">0 words · 0 / 8000 characters</span></div></details>
 <script>
   const notes = document.querySelector('#notes');
   const status = document.querySelector('#status');
@@ -56,7 +60,7 @@
       current = await mew.state.get('private');
       notes.value = text();
       notes.disabled = false;
-      status.textContent = 'Ready. Notes save only when you choose Save.';
+      status.textContent = 'Ready.';
     } catch { status.textContent = 'Notes could not be loaded. Your stored notes are untouched.'; retry.hidden = false; }
     refresh();
   }
