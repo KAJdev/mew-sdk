@@ -1,9 +1,15 @@
+export type AppPermission = "storage:private" | "storage:shared" | "handler:events" | "messages:post" | "messages:post_as_app" | "messages:read" | "members:read" | "network" | "storage:backend" | "schedule" | "http" | "secrets:publisher" | "profile:publish" | "media:youtube" | "media:spotify" | "voice:read" | "voice:connect" | "voice:publish" | "maps:ventusky";
+export const APP_PERMISSIONS: readonly AppPermission[];
+export type NetworkPolicy = { origins: string[]; methods: string[]; request_headers: string[]; response_headers: string[] };
+
 export interface BuiltProject {
   config: Record<string, unknown>;
   manifest: {
     sdk_version: 2;
     state_version: 1;
-    permissions: string[];
+    permissions: AppPermission[];
+    secrets?: string[];
+    network?: NetworkPolicy;
     widgets: Record<string, { type: "page" | "panel" | "message" | "profile" | "chatbar"; title?: string; anchors?: string[]; message_type?: string }>;
     /** the page widget that opens first; required unless every widget is a profile widget */
     home?: string;

@@ -233,6 +233,29 @@ These descriptions are source contracts, not proof of two-human streaming, compl
 
 ## Examples
 
+### Server-owned public lookups
+
+Widget projects register server actions and schedules with `App` from `mew-sdk/handler`, reference that file as `handler` in app.json, and declare `schedule` for cron. Public IDs are user-declared lookup targets, not proof of ownership. The API and matching managed Workers must be deployed before operation; source publication is separate from installed-app activation.
+
+`network` requires a top-level policy such as `{ "origins": ["https://api.example.com"], "methods": ["GET"], "request_headers": ["authorization"], "response_headers": ["retry-after"] }`. Origins are exact public HTTPS destinations. Accept, Content-Type and User-Agent are built in; declare other headers explicitly. Cookies, control-plane/hop-by-hop headers and redirects fail closed. An app cannot choose its execution grant or use an anonymous proxy. Widget network access remains disabled.
+
+Declare `secrets: ["API_KEY"]` with `secrets:publisher` and configure a value through `mew secret set <app-id> API_KEY` using standard input, never a command argument or source file. `mew secret list <app-id>` returns configured names/status; `delete` removes a value. Only the human publisher owner manages keys. Only a live server execution of the same app/version declaring the name can call `ctx.secrets.get("API_KEY")`, which returns a value or `undefined`. No ambient operator environment or user credentials are exposed. App server code must be trusted with keys it consumes. Rotation/deletion revokes current execution tokens.
+
+`ctx.state.shared` uses `storage:shared`. Installation backend KV/SQL at `ctx.storage` uses `storage:backend`. An enabled personal installation with `storage:private` can use `ctx.state.private` for its installer's configuration and cache; a channel handler cannot select another user's private state. With `profile:publish` and a profile widget, an atomic write is:
+
+```ts
+const current = await ctx.state.private.get();
+await ctx.state.private.put({
+  expected_revision: current.revision,
+  value: { ...current.value, sharing: false },
+  profile: {},
+});
+```
+
+Both JSON objects are bounded to 16 KiB/depth 16 and commit together against the private revision. Require explicit owner sharing, default it off, publish only a sanitized projection, and clear the snapshot with `{}` on disconnect. Reserve the private revision before provider work and commit against that exact revision so lookup changes, sharing changes and authority loss fence stale output. CAS update callbacks may rerun and must not contain provider effects. Expanded network resources or secret names require explicit installation approval.
+
+Persist cache timestamps and Retry-After/backoff. Missing provider access stays unavailable, private/opted-out/invalid data clears publishable cache, and transient failures may retain visibly stale observations. Profile widgets read stored snapshots without provider calls. This contract contains no OAuth/OpenID callbacks, user token vault, incoming webhook framework or host certification of app claims.
+
 - `sample.html`: a shared counter and a private note, scaffolded by `mew init`.
 - `examples/notes`: a private scratchpad. Preview it with `mew dev examples/notes`.
 
