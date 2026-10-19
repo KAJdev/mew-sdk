@@ -21,14 +21,17 @@ const help = `mew app development
   disable <installation-id>           disable an installation
   uninstall <installation-id>         uninstall and delete app state
   state <installation-id> <scope>     read private or shared state
+  secret list <app-id>                list configured publisher secret names
+  secret set <app-id> <name>          read a publisher secret from standard input
+  secret delete <app-id> <name>       delete a publisher secret
   dev [folder] [--port <port>]        preview the app UI locally with in-memory state
   dev <folder> <event.json>           invoke a local operator-owned handler (repository checkout)
 
 MEW_API_URL is the API base before /v1 and defaults to https://mew.space/api;
 set it to http://127.0.0.1:8000 for a local API. MEW_TOKEN is an account token
 held in the environment.
-Publishing does not start hosted execution. Scoped CI tokens, managed logs and
-secret operations are not available in this milestone.`;
+Publishing uses the configured hosted executor. Publisher secret values are
+write-only, app-scoped and available only to authorized server handlers.`;
 
 function identifier(value) {
   if (typeof value !== 'string' || !/^[A-Za-z0-9:_-]{1,160}$/.test(value)) throw new Error('Invalid identifier');
@@ -66,7 +69,7 @@ async function save(dir, config) {
   await rename(temporary, path.join(dir, 'app.json'));
 }
 
-export async function run(args, { env = process.env, output = console.log } = {}) {
+export async function run(args, { env = process.env, output = console.log, input = process.stdin } = {}) {
   const [command, ...rest] = args;
   if (!command || command === '--help' || command === 'help') return output(help);
   if (command === '--version' || command === 'version') return output(version);
@@ -111,6 +114,25 @@ export async function run(args, { env = process.env, output = console.log } = {}
   }
   const api = new ApiClient(env.MEW_API_URL ?? 'https://mew.space/api', env.MEW_TOKEN);
   const print = (value) => output(JSON.stringify(value, null, 2));
+  if (command === 'secret') {
+    const [operation, appId, name] = rest;
+    if (operation === 'list' && rest.length === 2) return print(await api.request(`apps/${identifier(appId)}/secrets`));
+    if (!['set', 'delete'].includes(operation) || rest.length !== 3 || !/^[A-Z][A-Z0-9_]{0,63}$/.test(name)) throw new Error('Usage: mew secret list <app-id> | mew secret set|delete <app-id> <name>');
+    const endpoint = `apps/${identifier(appId)}/secrets/${name}`;
+    if (operation === 'delete') return print(await api.request(endpoint, 'DELETE'));
+    if (input.isTTY) throw new Error('Supply the value through standard input, never a command-line argument.');
+    const chunks = [];
+    let size = 0;
+    for await (const chunk of input) {
+      const bytes = Buffer.from(chunk);
+      size += bytes.length;
+      if (size > 8192) throw new Error('Publisher secret exceeds 8 KiB');
+      chunks.push(bytes);
+    }
+    const value = Buffer.concat(chunks).toString('utf8').replace(/\r?\n$/, '');
+    if (!value) throw new Error('Publisher secret must not be empty');
+    return print(await api.request(endpoint, 'PUT', { value }));
+  }
   if (command === 'deploy') {
     if (rest.length > 1) throw new Error('Usage: mew deploy [folder]');
     const { dir, config, source } = await configuration(rest[0]);
