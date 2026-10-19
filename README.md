@@ -103,6 +103,42 @@ document.querySelector("#post-poll")?.addEventListener("click", () => {
 - Message posts run synchronously inside a trusted click or keydown handler in a visible, active widget. Timers and synthetic events cannot post. Parked widgets receive host events but cannot issue requests until visibly reattached with unchanged authority. Widget posts always have the person as the author. Only handlers and bots post as the app, with `messages:post_as_app`, and an installation can store at most 30 app-authored messages per minute; rejected or retried posts use none of that allowance. Posts for one installation run one at a time; a post that finds the installation still busy after about a second fails with `429` and uses none of the allowance.
 - Message and profile widgets size to their content. `mew.frame.setHeight(px)` sets the height explicitly.
 
+### Shared controls
+
+Apps opt into the canonical host control styles through `mew-sdk/ui`. The module has no React or host-service dependency; it delegates to native DOM helpers in the injected SDK.
+
+```ts
+import { button, input, select, textarea } from "mew-sdk/ui";
+
+const save = button({ text: "Save", variant: "primary", onClick: () => saveDraft() });
+const title = input({ label: "Title", value: "", onInput: (value) => editTitle(value) });
+const sort = select({
+  label: "Sort order",
+  options: [{ value: "recent", label: "Most recent" }, { value: "name", label: "Name" }],
+  value: "recent",
+});
+const notes = textarea({ label: "Notes", rows: 4 });
+document.body.append(title, sort, notes, save);
+```
+
+The helpers return actual `HTMLButtonElement`, `HTMLInputElement`, `HTMLSelectElement` and `HTMLTextAreaElement` objects. Disabled, required, readonly and value properties remain native. Input/change callbacks receive the current string value and original event. Labels and option text use text content, not HTML. Button variants are `primary`, `secondary`, `ghost` and `destructive`; the default is secondary. Loading disables a button and marks it busy. Provide an accessible label or an associated visible label for every field.
+
+Each helper installs the shared styles idempotently. Raw HTML apps can call `mew.ui.install()` and use `.ui-button` with `data-variant`, `.ui-input` or `.ui-select`, or call `mew.ui.button/input/select/textarea` directly. No runtime module fetch is needed. `installUI()` from `mew-sdk/ui` performs the same opt-in style installation. App composition and data actions remain app-owned. Control styling is class-scoped; body typography uses the explicit app declaration below.
+
+UI installation registers locally bundled Geist once per document from fixed font bytes. Controls use regular weight 400 without synthesized weight. Apps can opt their own text into the same family:
+
+```css
+html {
+  font-family: var(--mew-font-sans, system-ui, sans-serif);
+  font-weight: 400;
+  font-synthesis: none;
+}
+```
+
+The upright variable face supports genuine authored weights 100 through 900. The sandbox keeps its opaque origin and font/network denial; registration uses a binary-source FontFace, not a font URL. System sans is the failure fallback. Apps can use the native CSS Font Loading API when font readiness matters. Geist is bundled with its [SIL Open Font License](assets/fonts/Geist-OFL.txt); native binary distributions include `Geist-OFL.txt`.
+
+Controls inherit the trusted theme and use regular-weight system sans while the app font is unselected. Their definitions are shared with the host component library. This UI module grants no network, font, frame, media, account or state access and leaves the opaque sandbox policy intact. Switches and overlays are outside these native helper exports.
+
 ### Helpers
 
 ```ts
@@ -203,3 +239,5 @@ These descriptions are source contracts, not proof of two-human streaming, compl
 ## License
 
 MIT
+
+Bundled Geist font software is copyright 2024 The Geist Project Authors and licensed under the [SIL Open Font License 1.1](assets/fonts/Geist-OFL.txt).

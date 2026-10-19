@@ -2,6 +2,8 @@ export type { Embed, CompactEmbed, RichEmbed, EmbedBadge, MessagePayload } from 
 import type { MediaTarget, MediaResult } from "./media.js";
 import type { AppVoice, VoiceRoom } from "./voice.js";
 import type { WeatherTarget, WeatherResult } from "./weather.js";
+import type { ControlTheme, UIControls } from "./ui.js";
+export type { ControlThemeToken, ControlTheme, UIControls, ButtonVariant, ButtonProps, FieldProps, InputProps, SelectProps, TextareaProps } from "./ui.js";
 export type { WeatherTarget, WeatherResult } from "./weather.js";
 export type { AppVoice, VoiceRoom, VoiceActivity, VoiceActivityCommand, VoiceStreamHandle, VoiceStream, VoiceParticipant } from "./voice.js";
 export type { MediaTarget, MediaResult } from "./media.js";
@@ -11,7 +13,7 @@ export type State = { revision: number; value: Record<string, unknown>; state_ve
 export type StateUpdate = { expected_revision: number; value: Record<string, unknown> };
 export type StateEvent = Readonly<{ scope: Scope; revision: number; value: Record<string, unknown> }>;
 export type RealtimeEvent = Readonly<{ topic: string; data: unknown }>;
-export type Theme = Readonly<{ version: 1; primary: string; background: string; secondary: string; tertiary: string }>;
+export type Theme = Readonly<{ version: 1; primary: string; background: string; secondary: string; tertiary: string; controls?: Readonly<ControlTheme> }>;
 export type WidgetType = "page" | "panel" | "message" | "profile" | "chatbar";
 export type ContextMessage = Readonly<{ id: string; type: string; data: Readonly<Record<string, unknown>>; content: string; author_id: string; created_at: string }>;
 export type Context = Readonly<{
@@ -33,6 +35,7 @@ export interface Events {
 export interface MewSDK {
   readonly version: 1;
   readonly context: Context;
+  readonly ui: UIControls;
   call<T = unknown>(name: string, args?: unknown): Promise<T>;
   /** asks the host to open an http or https link in a new tab after a click in this frame. the host shows the domain and asks first. */
   open(url: string): void;

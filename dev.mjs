@@ -5,6 +5,7 @@ import path from "node:path";
 import { randomBytes } from "node:crypto";
 import { sandboxDocument } from "./document.mjs";
 import { bootstrapSource } from "./assets.mjs";
+import { controlTheme } from "./ui-runtime.js";
 
 const MAX_DOCUMENT_BYTES = 262_144;
 const MAX_STATE_BYTES = 16_384;
@@ -34,7 +35,7 @@ button{font:inherit;color:inherit;background:var(--color-tertiary);border:0;padd
 <script nonce="${nonce}">
 const frame = document.getElementById("frame");
 const status = document.getElementById("status");
-const theme = () => { const s = getComputedStyle(document.documentElement); return { version: 1, ...Object.fromEntries(["primary","background","secondary","tertiary"].map((k) => [k, s.getPropertyValue("--color-" + k).trim()])) }; };
+const theme = () => { const s = getComputedStyle(document.documentElement); return { version: 1, ...Object.fromEntries(["primary","background","secondary","tertiary"].map((k) => [k, s.getPropertyValue("--color-" + k).trim()])), controls: (${controlTheme.toString()})(s) }; };
 let close = () => {};
 async function mount() {
   close();

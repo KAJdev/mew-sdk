@@ -15,6 +15,8 @@ const inlineAssets = {
       contents: `export const bootstrapSource = ${JSON.stringify(await readFile(path.join(root, "bootstrap.js"), "utf8"))};\n` +
         `export const sampleHtml = ${JSON.stringify(await readFile(path.join(root, "sample.html"), "utf8"))};\n` +
         `export const handlerSource = ${JSON.stringify(await readFile(path.join(root, "handler.js"), "utf8"))};\n` +
+        `export const uiSource = ${JSON.stringify(await readFile(path.join(root, "ui.js"), "utf8"))};\n` +
+        `export const uiFontSource = ${JSON.stringify((await readFile(path.join(root, "assets/fonts/Geist-wght.woff2"))).toString("base64"))};\n` +
         `export const version = ${JSON.stringify(version)};\n`,
     }));
   },
@@ -25,7 +27,9 @@ await mkdir(out, { recursive: true });
 const bundle = await Bun.build({ entrypoints: [path.join(root, "cli/bin/mew.js")], target: "bun", plugins: [inlineAssets], outdir: path.join(out, ".bundle") });
 if (!bundle.success) throw new AggregateError(bundle.logs, "bundle failed");
 const entry = bundle.outputs[0].path;
-const sums = [];
+const fontLicense = await readFile(path.join(root, "assets/fonts/Geist-OFL.txt"));
+await writeFile(path.join(out, "Geist-OFL.txt"), fontLicense);
+const sums = [`${createHash("sha256").update(fontLicense).digest("hex")}  Geist-OFL.txt`];
 for (const target of targets) {
   const file = `mew-${target}${target.startsWith("windows") ? ".exe" : ""}`;
   const result = Bun.spawnSync(["bun", "build", "--compile", `--target=bun-${target}`, entry, "--outfile", path.join(out, file)], { stdout: "inherit", stderr: "inherit" });
