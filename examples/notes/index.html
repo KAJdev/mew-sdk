@@ -1,39 +1,51 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Private notes</title>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Notes</title>
 <style>
-  :root { --fg: var(--color-primary, var(--mew-primary, #e1e3e2)); --dim: var(--color-secondary, var(--mew-secondary, #a4a7a6)); --bg: var(--color-background, var(--mew-background, #111213)); --soft: var(--color-row, color-mix(in srgb, var(--fg) 6%, var(--bg))); color: var(--fg); background: var(--bg); font: 400 14px/1.6 var(--mew-font-sans, system-ui, sans-serif); font-synthesis: none; }
+  :root { color: var(--color-primary, var(--mew-primary, #e1e3e2)); background: var(--color-background, var(--mew-background, #090a0b)); font: 400 14px/1.5 var(--mew-font-sans, Geist, sans-serif); --line: color-mix(in srgb, var(--mew-primary, #e1e3e2) 9%, var(--mew-background, #090a0b)); }
   * { box-sizing: border-box; }
-  body { max-width: 800px; margin: 0 auto; padding: 24px; -webkit-font-smoothing: antialiased; }
-  header { margin-bottom: 20px; }
-  h1 { font-size: 24px; font-weight: 400; letter-spacing: -.025em; line-height: 1.25; margin: 0 0 8px; }
-  p { margin: 8px 0; }
-  .dim, #count, label, #status { color: var(--dim); }
-  textarea { display: block; width: 100%; min-height: 340px; resize: vertical; margin-top: 8px; line-height: 1.7; }
-  .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 16px 0; }
-  #count { font-size: 12px; }
-  #conflict { background: var(--soft); border-left: 2px solid var(--dim); border-radius: 4px; padding: 16px; margin: 20px 0; }
-  #conflict strong { font-weight: 400; font-size: 16px; }
-  summary { display: list-item; width: fit-content; }
-  details { margin-top: 12px; }
-  .footnote { font-size: 12px; }
-  pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 200px; overflow: auto; font: inherit; }
+  body { min-height: 100dvh; height: 100dvh; margin: 0; display: flex; flex-direction: column; }
+  h1, h2, p { margin: 0; font-weight: 400; }
+  h1 { font-size: 16px; }
+  h2 { font-size: 14px; }
+  .dim, #count { color: var(--color-secondary, var(--mew-secondary, #a4a7a6)); }
+  header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 10px 20px; border-bottom: 1px solid var(--line); }
+  .heading, .actions { display: flex; align-items: center; gap: 8px; }
+  .heading .dim { font-size: 12px; }
+  main { display: flex; flex: 1; min-height: 200px; }
+  .editor { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+  .editor > label { padding: 20px 24px 0; color: var(--color-secondary, var(--mew-secondary, #a4a7a6)); font-size: 12px; }
+  textarea { flex: 1; min-height: 200px; width: 100%; resize: none; border: 0; padding: 12px 24px 24px; color: inherit; background: transparent; font: inherit; line-height: 1.8; outline-offset: -3px; }
+  textarea::placeholder { color: var(--color-secondary, var(--mew-secondary, #a4a7a6)); }
+  textarea:focus-visible { outline: 1px solid var(--color-focus, var(--mew-secondary, #a4a7a6)); }
+  textarea:disabled { opacity: .55; }
+  footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 10px 20px; border-top: 1px solid var(--line); font-size: 12px; }
+  footer .actions { flex-wrap: wrap; }
+  #conflict { flex: 0 1 360px; min-width: 260px; border-left: 1px solid var(--line); padding: 20px; overflow: auto; }
+  #conflict p { margin: 8px 0 16px; font-size: 13px; }
+  #conflict pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; padding: 12px; background: color-mix(in srgb, var(--mew-primary, #e1e3e2) 4%, transparent); border-radius: 4px; }
+  #conflict .actions { flex-wrap: wrap; }
   [hidden] { display: none !important; }
-  body.focus header { display: none; }
-  body.focus textarea { min-height: 70vh; }
-  @media (max-width: 480px) { body { padding: 20px 14px; } #count { width: 100%; margin: 0; } }
+  body.focus .privacy, body.focus .editor > label { display: none; }
+  body.focus textarea { padding-top: 24px; }
+  @media (max-width: 600px) { header, footer { padding-inline: 12px; } .editor > label { padding-inline: 16px; } textarea { padding-inline: 16px; } main { flex-direction: column; } #conflict { flex: none; min-width: 0; border-left: 0; border-top: 1px solid var(--line); padding: 16px; } }
 </style>
 </head>
 <body>
-<header><h1>Private notes</h1><p class="dim">Only you can read these notes.</p></header>
-<label for="notes">Your notes</label><textarea id="notes" class="ui-input" maxlength="8000" disabled placeholder="Capture an idea, make a list, work something out."></textarea>
-<div class="bar"><button id="save" class="ui-button" data-variant="primary" type="button" disabled>Save notes</button><button id="retry" class="ui-button" data-variant="secondary" type="button" hidden>Retry loading</button><span id="status" role="status">Loading your notes…</span></div>
-<section id="conflict" hidden aria-label="Review saved version"><strong>Review the saved version</strong><p class="dim">Your draft is still in the editor. Compare it with the text currently stored before choosing what to keep.</p><pre id="remote"></pre><div class="bar"><button id="use" class="ui-button" data-variant="secondary" type="button">Use saved text</button><button id="keep" class="ui-button" data-variant="secondary" type="button">Keep my draft</button></div></section>
-<p class="dim footnote">Save to keep your changes. Closing the app can discard unsaved text.</p>
-<details><summary class="ui-button" data-variant="ghost">Tools</summary><div class="bar"><button id="focus" class="ui-button" data-variant="ghost" type="button" aria-pressed="false">Focus mode</button><button id="restore" class="ui-button" data-variant="secondary" type="button" disabled>Review saved text</button><span id="count">0 words · 0 / 8000 characters</span></div></details>
+<header><div class="heading"><h1>Notes</h1><span class="dim privacy">Only you</span></div><div class="actions"><button id="focus" aria-pressed="false">Focus</button><button id="restore" disabled>Discard changes</button><button id="save" disabled>Save</button></div></header>
+<main>
+  <div class="editor"><label for="notes">Your notes</label><textarea id="notes" maxlength="8000" disabled placeholder="Start writing…" spellcheck="true"></textarea></div>
+  <section id="conflict" hidden aria-label="Review saved version"><h2>Review saved text</h2><p class="dim">Your draft is still in the editor. Choose which version to keep.</p><pre id="remote"></pre><div class="actions"><button id="use">Use saved text</button><button id="keep">Keep my draft</button></div></section>
+</main>
+<footer><div class="actions"><span id="status" role="status">Loading your notes…</span><button id="retry" hidden>Retry</button></div><span id="count">0 words · 0 / 8000</span></footer>
 <script>
   mew.ui.install();
+  for (const button of document.querySelectorAll('button')) {
+    button.type = 'button';
+    button.className = 'ui-button';
+    button.dataset.variant = button.id === 'save' || button.id === 'use' ? 'primary' : 'ghost';
+  }
   const notes = document.querySelector('#notes');
   const status = document.querySelector('#status');
   const save = document.querySelector('#save');
@@ -45,51 +57,57 @@
   const text = () => String(current?.value.text || '');
   function refresh() {
     const words = notes.value.trim().split(/\s+/).filter(Boolean).length;
-    document.querySelector('#count').textContent = `${words} words · ${notes.value.length} / 8000 characters`;
+    document.querySelector('#count').textContent = `${words} ${words === 1 ? 'word' : 'words'} · ${notes.value.length} / 8000`;
     save.disabled = !current || busy || !conflict.hidden || notes.value === text();
     restore.disabled = !current || busy || notes.value === text();
+    save.textContent = busy ? 'Saving…' : 'Save';
+    save.setAttribute('aria-busy', String(busy));
   }
   async function load() {
     retry.hidden = true;
+    status.textContent = 'Loading your notes…';
     try {
       current = await mew.state.get('private');
       notes.value = text();
       notes.disabled = false;
-      status.textContent = 'Ready.';
-    } catch { status.textContent = 'Notes could not be loaded. Your stored notes are untouched.'; retry.hidden = false; }
+      status.textContent = 'All changes saved';
+    } catch { status.textContent = 'Your notes couldn’t be loaded.'; retry.hidden = false; }
     refresh();
   }
   retry.onclick = load;
-  notes.oninput = () => { status.textContent = notes.value === text() ? 'Matches saved text.' : 'Unsaved changes.'; refresh(); };
-  restore.onclick = () => { document.querySelector('#remote').textContent = text() || '(empty note)'; conflict.hidden = false; refresh(); };
-  document.querySelector('#use').onclick = () => { notes.value = text(); conflict.hidden = true; status.textContent = 'Showing saved text.'; refresh(); };
-  document.querySelector('#keep').onclick = () => { conflict.hidden = true; status.textContent = 'Your draft is kept. Choose Save to write it over the reviewed version.'; refresh(); };
-  document.querySelector('#focus').onclick = (event) => { const focused = document.body.classList.toggle('focus'); event.target.setAttribute('aria-pressed', String(focused)); event.target.textContent = focused ? 'Leave focus mode' : 'Focus mode'; notes.focus(); };
+  notes.oninput = () => { status.textContent = notes.value === text() ? 'All changes saved' : 'Unsaved changes'; refresh(); };
+  restore.onclick = () => { document.querySelector('#remote').textContent = text() || '(Empty note)'; conflict.hidden = false; refresh(); document.querySelector('#use').focus(); };
+  document.querySelector('#use').onclick = () => { notes.value = text(); conflict.hidden = true; status.textContent = 'All changes saved'; refresh(); notes.focus(); };
+  document.querySelector('#keep').onclick = () => { conflict.hidden = true; status.textContent = 'Draft kept. Save when you’re ready.'; refresh(); notes.focus(); };
+  document.querySelector('#focus').onclick = (event) => { const focused = document.body.classList.toggle('focus'); event.target.setAttribute('aria-pressed', String(focused)); event.target.textContent = focused ? 'Exit focus' : 'Focus'; notes.focus(); };
   save.onclick = async () => {
-    if (!current || busy || !conflict.hidden) return;
+    if (!current || busy || !conflict.hidden || notes.value === text()) return;
     busy = true;
     notes.disabled = true;
     refresh();
     const draft = notes.value;
     try {
       current = await mew.state.put('private', { expected_revision: current.revision, value: { ...current.value, text: draft } });
-      status.textContent = 'Saved.';
+      status.textContent = 'All changes saved';
     } catch {
       try {
         const latest = await mew.state.get('private');
         const changed = latest.revision !== current.revision;
         current = latest;
         if (changed) {
-          document.querySelector('#remote').textContent = text() || '(empty note)';
+          document.querySelector('#remote').textContent = text() || '(Empty note)';
           conflict.hidden = false;
-          status.textContent = 'The saved version changed. Review it below. Your draft is kept.';
-        } else status.textContent = 'Save failed. Your draft is kept; try saving again.';
-      } catch { status.textContent = 'Save failed and saved text is unavailable. Your draft is kept; try saving again.'; }
+          status.textContent = 'Saved text changed elsewhere. Review it alongside your draft.';
+        } else status.textContent = 'Couldn’t save. Your draft is kept; try again.';
+      } catch { status.textContent = 'Couldn’t save. Your draft is kept; try again.'; }
     }
     notes.disabled = false;
     busy = false;
     refresh();
   };
+  document.addEventListener('keydown', event => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') { event.preventDefault(); if (!save.disabled) save.click(); }
+  });
   load();
 </script>
 </body></html>
