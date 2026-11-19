@@ -13,6 +13,7 @@ const modules = { "mew-sdk/handler": handlerSource };
 const files = () => ({
   "app.json": JSON.stringify({
     name: "polls",
+    home: "dashboard",
     permissions: ["storage:shared", "messages:post"],
     widgets: {
       dashboard: { type: "page", title: "Polls", entry: "src/dashboard.ts" },
@@ -35,6 +36,7 @@ test("builds widgets, the handler and its registrations", async () => {
   assert.deepEqual(built.manifest, {
     sdk_version: 2,
     state_version: 1,
+    home: "dashboard",
     permissions: ["storage:shared", "messages:post"],
     widgets: {
       dashboard: { type: "page", title: "Polls" },
@@ -60,11 +62,13 @@ test("output is deterministic", async () => {
 
 test("widget manifests declare content and placement without dimensions", () => {
   const widgets = {
+    home: { type: "page", html: "widget.html" },
     message: { type: "message", message_type: "poll", html: "widget.html" },
     profile: { type: "profile", html: "widget.html" },
     panel: { type: "panel", anchors: ["top"], html: "widget.html" },
   };
-  assert.deepEqual(checkConfig({ widgets }).widgets, {
+  assert.deepEqual(checkConfig({ home: "home", widgets }).widgets, {
+    home: { type: "page" },
     message: { type: "message", message_type: "poll" },
     profile: { type: "profile" },
     panel: { type: "panel", anchors: ["top"] },
@@ -117,6 +121,17 @@ test("checkConfig reports app.json problems before bundling", () => {
   assert.throws(() => checkConfig({ ...config, state_version: 2 }), /state_version must be 1/);
 });
 
+test("home names a page widget and is optional only for profile-only apps", () => {
+  const config = JSON.parse(files()["app.json"]);
+  assert.equal(checkConfig(config).home, "dashboard");
+  for (const home of [null, 1, "missing", "poll", "top"]) {
+    assert.throws(() => checkConfig({ ...config, home }), /home must name a page widget/);
+  }
+  assert.throws(() => checkConfig({ ...config, home: undefined }), /need a home page widget/);
+  const profile = checkConfig({ widgets: { profile: { type: "profile", html: "profile.html" } } });
+  assert.equal(Object.hasOwn(profile, "home"), false);
+});
+
 test("chatbar widgets bind to a declared user-posted message type", () => {
   const config = JSON.parse(files()["app.json"]);
   config.widgets.compose = { type: "chatbar", message_type: "poll", title: "Create a poll", entry: "src/poll.ts" };
@@ -129,6 +144,6 @@ test("chatbar widgets bind to a declared user-posted message type", () => {
 });
 
 test("a widget whose entry builds to nothing is refused", async () => {
-  const empty = { "app.json": JSON.stringify({ widgets: { main: { type: "page", entry: "main.ts" } } }), "main.ts": "" };
+  const empty = { "app.json": JSON.stringify({ home: "main", widgets: { main: { type: "page", entry: "main.ts" } } }), "main.ts": "" };
   await assert.rejects(buildProject(empty, { esbuild }), /builds to nothing/);
 });
