@@ -79,8 +79,8 @@ function storage() {
   };
 }
 
-function shared(installationId) {
-  const path = `${API}/v1/app-installations/${installationId}/state/shared`;
+function stateStore(installationId, scope) {
+  const path = `${API}/v1/app-installations/${installationId}/state/${scope}`;
   const state = {
     get: () => call(path, "GET"),
     put: (update) => call(path, "PUT", update),
@@ -196,7 +196,12 @@ export class App {
       installation,
       env,
       storage: storage(),
-      state: { shared: shared(installation.id) },
+      state: { shared: stateStore(installation.id, 'shared'), private: stateStore(installation.id, 'private') },
+      secrets: { async get(name) {
+        if (!/^[A-Z][A-Z0-9_]{0,63}$/.test(name)) throw new TypeError('invalid publisher secret name');
+        const result = await call(`${API}/v1/app-installations/${installation.id}/secrets/${name}`, 'GET');
+        return result.value ?? undefined;
+      } },
       realtime: {
         publish: (topic, data, options = {}) => call(`${API}/v1/app-installations/${installation.id}/realtime`, "POST", { topic, data, ...options }),
       },
@@ -239,9 +244,8 @@ export class App {
       }
       return json(400, { error: { code: "unknown_kind", message: `unknown dispatch kind ${kind}` } });
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      ctx.log.error(message, { stack: error instanceof Error ? error.stack : undefined });
-      return json(kind === "action" ? 422 : 500, { error: { code: "handler_error", message: message.slice(0, 500) } });
+      ctx.log.error('handler_error');
+      return json(kind === "action" ? 422 : 500, { error: { code: "handler_error", message: 'The app operation could not finish.' } });
     }
   }
 }

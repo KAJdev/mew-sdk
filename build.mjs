@@ -6,6 +6,32 @@ const HANDLER_BYTES = 10 * 1024 * 1024;
 const SOURCE_BYTES = 2 * 1024 * 1024;
 const ASSETS = { ".png": "dataurl", ".jpg": "dataurl", ".jpeg": "dataurl", ".gif": "dataurl", ".svg": "dataurl", ".webp": "dataurl", ".woff": "dataurl", ".woff2": "dataurl", ".ttf": "dataurl", ".json": "json", ".txt": "text" };
 const TEXT = /\.(?:[cm]?[jt]sx?|css|html|json|md|txt|svg)$/;
+export const APP_PERMISSIONS = ['storage:private', 'storage:shared', 'handler:events', 'messages:post', 'messages:post_as_app', 'messages:read', 'members:read', 'network', 'storage:backend', 'schedule', 'http', 'secrets:publisher', 'profile:publish', 'media:youtube', 'media:spotify', 'voice:read', 'voice:connect', 'voice:publish', 'maps:ventusky'];
+
+function capabilities(config, permissions) {
+  const names = config.secrets ?? [];
+  if (!Array.isArray(names) || names.length > 64 || new Set(names).size !== names.length
+    || names.some((name) => typeof name !== 'string' || !/^[A-Z][A-Z0-9_]{0,63}$/.test(name))
+    || (names.length && (!config.handler || !permissions.includes('secrets:publisher')))) throw new Error('publisher secrets require distinct declared names, a handler and secrets:publisher');
+  const network = config.network;
+  if (network === undefined) {
+    if (permissions.includes('network')) throw new Error('network permission requires a network policy');
+  } else {
+    const keys = ['origins', 'methods', 'request_headers', 'response_headers'];
+    if (!network || typeof network !== 'object' || Array.isArray(network) || Object.keys(network).length !== 4
+      || !permissions.includes('network') || !config.handler
+      || keys.some((key) => !Array.isArray(network[key]) || network[key].length > 64 || new Set(network[key]).size !== network[key].length
+        || network[key].some((value) => typeof value !== 'string'))) throw new Error('network needs a handler and declared origins, methods, request_headers and response_headers');
+    if (!network.origins.length || !network.methods.length || network.origins.some((origin) => {
+      try { const url = new URL(origin); return url.protocol !== 'https:' || url.origin !== origin || url.port || url.username || url.password || !url.hostname.includes('.') || /[\[\]:]/.test(url.hostname); }
+      catch { return true; }
+    }) || network.methods.some((method) => !['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(method))
+      || [...network.request_headers, ...network.response_headers].some((name) => !/^[a-z0-9-]{1,64}$/.test(name)
+        || ['host', 'cookie', 'set-cookie', 'connection', 'content-length', 'transfer-encoding', 'upgrade', 'trailer', 'te', 'expect'].includes(name)
+        || /^(proxy-|x-forwarded-|x-mew-)/.test(name))) throw new Error('invalid network policy');
+  }
+  return { ...(names.length ? { secrets: names } : {}), ...(network === undefined ? {} : { network }) };
+}
 
 const bytes = (value) => new TextEncoder().encode(value).length;
 
@@ -119,12 +145,12 @@ async function bundle(esbuild, files, entry, options, plugin) {
 export function checkConfig(config) {
   if (!config || typeof config !== "object" || Array.isArray(config)) throw new Error("app.json must be an object");
   const permissions = config.permissions ?? [];
-  if (!Array.isArray(permissions) || permissions.some((p) => typeof p !== "string") || new Set(permissions).size !== permissions.length) throw new Error("permissions must be distinct strings");
+  if (!Array.isArray(permissions) || permissions.some((p) => !APP_PERMISSIONS.includes(p)) || new Set(permissions).size !== permissions.length) throw new Error("permissions must be distinct supported permissions");
   if (!config.widgets || typeof config.widgets !== "object" || Array.isArray(config.widgets) || !Object.keys(config.widgets).length) throw new Error("app.json needs at least one widget");
   if (config.handler !== undefined && (typeof config.handler !== "string" || !config.handler)) throw new Error("handler must be a file path");
   if (config.state_version !== undefined && config.state_version !== 1) throw new Error("state_version must be 1");
   const types = new Set();
-  const manifest = { sdk_version: 2, state_version: 1, permissions, widgets: {} };
+  const manifest = { sdk_version: 2, state_version: 1, permissions, ...capabilities(config, permissions), widgets: {} };
   for (const name of Object.keys(config.widgets).sort()) {
     const widget = config.widgets[name];
     manifest.widgets[name] = widgetManifest(name, widget);
@@ -140,6 +166,7 @@ export function checkConfig(config) {
     throw new Error("apps with page, panel, message or chatbar widgets need a home page widget");
   }
   const chatbars = Object.values(config.widgets).filter((widget) => widget?.type === "chatbar");
+  if (permissions.includes('profile:publish') && (!config.handler || !permissions.includes('storage:private') || !Object.values(config.widgets).some((widget) => widget.type === 'profile'))) throw new Error('profile publication requires a handler, private storage and a profile widget');
   if (chatbars.length && (!permissions.includes("messages:post") || chatbars.some((widget) => !types.has(widget.message_type)))) throw new Error("chatbar widgets need messages:post and a declared message_type");
   return manifest;
 }

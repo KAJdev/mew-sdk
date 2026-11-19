@@ -78,6 +78,10 @@ export interface Storage {
   sql<T = Record<string, JsonValue>>(query: string, ...params: JsonValue[]): Promise<T[]>;
 }
 
+export interface PrivateState extends Omit<SharedState, "put"> {
+  put(update: { expected_revision: number; value: State; profile?: State }): Promise<{ revision: number; value: State; state_version: number | null }>;
+}
+
 export interface MewClient {
   request<T = unknown>(method: string, path: string, body?: unknown): Promise<T>;
   readonly messages: {
@@ -92,7 +96,8 @@ export interface Context<Env = Record<string, string>> {
   readonly installation: { readonly id: string; readonly app_id: string; readonly channel_id: string | null; readonly personal: boolean };
   readonly env: Env;
   readonly storage: Storage;
-  readonly state: { readonly shared: SharedState };
+  readonly state: { readonly shared: SharedState; readonly private: PrivateState };
+  readonly secrets: { get(name: string): Promise<string | undefined> };
   readonly realtime: { publish(topic: string, data: JsonValue, options?: { user_id?: string }): Promise<void> };
   readonly mew: MewClient;
   readonly log: { info(message: string, fields?: object): void; warn(message: string, fields?: object): void; error(message: string, fields?: object): void };
