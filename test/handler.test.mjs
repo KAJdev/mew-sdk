@@ -62,7 +62,7 @@ test("thrown action errors become 422 and unknown actions 404", async () => {
   const failed = await app.fetch(envelope("action", { action: { name: "boom", args: {}, caller: {}, widget: {} } }), {});
   console.error = original;
   assert.equal(failed.status, 422);
-  assert.deepEqual(await failed.json(), { error: { code: "handler_error", message: "nope" } });
+  assert.deepEqual(await failed.json(), { error: { code: "handler_error", message: "The app operation could not finish." } });
   const missing = await app.fetch(envelope("action", { action: { name: "other", args: {}, caller: {}, widget: {} } }), {});
   assert.equal(missing.status, 404);
 });
